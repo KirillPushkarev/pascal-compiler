@@ -11,6 +11,11 @@ namespace PascalCompiler
     {
         static void Main(string[] args)
         {
+            TestLexicalAnalyzer();
+        }
+
+        static void TestIOModule()
+        {
             // Прочитать справочник ошибок
             var errorDigest = new Dictionary<int, string>();
             string line;
@@ -45,6 +50,36 @@ namespace PascalCompiler
             {
                 // TODO: лексический анализатор
             }
+        }
+
+        static void TestLexicalAnalyzer()
+        {
+            // Прочитать справочник ошибок
+            var errorDigest = new Dictionary<int, string>();
+            string line;
+            var errorDigestFile = new StreamReader(@".\error_digest.txt", Encoding.Default);
+            errorDigestFile.ReadLine();
+            while ((line = errorDigestFile.ReadLine()) != null)
+            {
+                var lineParts = line.Split(':');
+                int errorCode = int.Parse(lineParts[0]);
+                string errorMessage = lineParts[1];
+                errorDigest.Add(errorCode, errorMessage);
+            }
+            errorDigestFile.Close();
+
+            var errorTable = new ErrorTable(errorDigest);
+
+            var ioModule = new IOModule(errorTable, @".\1.pas", @".\listing.txt");
+            var lexicalAnalizer = new LexicalAnalyzer(ioModule);
+            Symbol? symbol = null; 
+            do
+            {
+                lexicalAnalizer.NextSymbol();
+                symbol = lexicalAnalizer.CurrentSymbol;
+                Console.WriteLine(symbol.Value.ToString());
+            }
+            while (symbol != null);
         }
     }
 }
