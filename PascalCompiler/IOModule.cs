@@ -13,8 +13,9 @@ namespace PascalCompiler
         StreamWriter listing;
         ErrorTable errorTable;
         string buffer;
-        int currentRow = 0;
-        int currentPosition = 0;
+
+        public int CurrentRow { get; private set; } = 0;
+        public int CurrentPosition { get; private set; } = 0;
 
         public IOModule(ErrorTable errorTable, string sourceFilename, string listingFilename)
         {
@@ -23,6 +24,7 @@ namespace PascalCompiler
             this.errorTable = errorTable;
 
             ReadNextLine();
+            errorTable.AddRow();
         }
 
         public char? NextCh()
@@ -30,23 +32,29 @@ namespace PascalCompiler
             if (buffer == null)
                 return null;
 
-            if (currentPosition == buffer.Length)
+            if (CurrentPosition == buffer.Length)
             {
                 WriteNextLineToListing();
                 ReadNextLine();
                 if (buffer == null)
                     return null;
 
-                currentRow++;
-                currentPosition = 0;
+                CurrentRow++;
+                CurrentPosition = 0;
+                errorTable.AddRow();
             }
 
-            return buffer[currentPosition++];
+            return buffer[CurrentPosition++];
         }
 
-        public void AddError(int code, string message)
+        public void AddError(int code)
         {
-            errorTable.Add(currentRow, new Error { Code = code, Position = currentPosition, Message = message });
+            errorTable.Add(CurrentRow, CurrentPosition, code);
+        }
+
+        public void AddError(int code, int row, int position)
+        {
+            errorTable.Add(row, position, code);
         }
 
         private void ReadNextLine()
@@ -61,8 +69,8 @@ namespace PascalCompiler
 
         private void WriteNextLineToListing()
         {
-            listing.WriteLine("  " + (currentRow + 1).ToString().PadLeft(3, '0') + "   " + buffer);
-            foreach (var error in errorTable.Errors[currentRow])
+            listing.WriteLine("  " + (CurrentRow + 1).ToString().PadLeft(3, ' ') + "   " + buffer);
+            foreach (var error in errorTable.Errors[CurrentRow])
             {
                 listing.WriteLine(("******* ") + string.Format("{0," + (error.Position - 1) + "}", "") + "^Ошибка с кодом " + error.Code);
                 listing.WriteLine(("******* ") + error.Message);
