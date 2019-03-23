@@ -18,13 +18,24 @@ namespace PascalCompiler
             { "in", Symbol.InSy },
             { "of", Symbol.OfSy },
             { "type", Symbol.TypeSy },
+            { "program", Symbol.ProgramSy },
+            { "var", Symbol.VarSy },
+            { "procedure", Symbol.ProcedureSy },
+            { "array", Symbol.ArraySy },
+            { "integer", Symbol.IntegerSy },
+            { "real", Symbol.RealSy },
         };
 
-        public Symbol CurrentSymbol { get; set; }
+        private Symbol CurrentSymbol { get; set; }
+        private Queue<Symbol> SymbolQueue { get; set; } = new Queue<Symbol>();
+        private int currentLineNumber;
+        private int currentPositionInLine;
+
         public HashSet<string> NameTable { get; set; } = new HashSet<string>();
         public string StringConstant { get; set; }
         public int IntConstant { get; set; }
         public double FloatConstant { get; set; }
+        public Error Error { get; set; }
 
         public LexicalAnalyzer(IOModule ioModule)
         {
@@ -33,6 +44,12 @@ namespace PascalCompiler
 
         public void NextSymbol()
         {
+            if (SymbolQueue.Count > 0)
+            {
+                CurrentSymbol = SymbolQueue.Dequeue();
+                return;
+            }
+
             while (currentCharacter.Value == ' ')
             {
                 currentCharacter = ioModule.NextCh();
@@ -95,17 +112,41 @@ namespace PascalCompiler
                         else
                             CurrentSymbol = Symbol.Colon;
                         break;
-                    case ';':
-                        CurrentSymbol = Symbol.Semicolon;
+                    case '+':
+                        CurrentSymbol = Symbol.Plus;
                         currentCharacter = ioModule.NextCh();
                         break;
-                    case ',':
-                        CurrentSymbol = Symbol.Comma;
+                    case '-':
+                        CurrentSymbol = Symbol.Minus;
+                        currentCharacter = ioModule.NextCh();
+                        break;
+                    case '*':
+                        currentCharacter = ioModule.NextCh();
+                        if (currentCharacter.Value == ')')
+                        {
+                            CurrentSymbol = Symbol.RightComment;
+                            currentCharacter = ioModule.NextCh();
+                        }
+                        else
+                            CurrentSymbol = Symbol.Star;
+                        break;
+                    case '\\':
+                        CurrentSymbol = Symbol.Slash;
+                        currentCharacter = ioModule.NextCh();
+                        break;
+                    case '=':
+                        CurrentSymbol = Symbol.Equals;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '(':
-                        CurrentSymbol = Symbol.LeftRoundBracket;
                         currentCharacter = ioModule.NextCh();
+                        if (currentCharacter.Value == '*')
+                        {
+                            CurrentSymbol = Symbol.LeftComment;
+                            currentCharacter = ioModule.NextCh();
+                        }
+                        else
+                            CurrentSymbol = Symbol.LeftRoundBracket;
                         break;
                     case ')':
                         CurrentSymbol = Symbol.RightRoundBracket;
@@ -127,12 +168,26 @@ namespace PascalCompiler
                         CurrentSymbol = Symbol.RightCurlyBracket;
                         currentCharacter = ioModule.NextCh();
                         break;
-                    case '*':
-                        CurrentSymbol = Symbol.Star;
+                    case '.':
+                        currentCharacter = ioModule.NextCh();
+                        if (currentCharacter.Value == '.')
+                        {
+                            CurrentSymbol = Symbol.TwoPoints;
+                            currentCharacter = ioModule.NextCh();
+                        }
+                        else
+                            CurrentSymbol = Symbol.Point;
+                        break;
+                    case ',':
+                        CurrentSymbol = Symbol.Comma;
                         currentCharacter = ioModule.NextCh();
                         break;
-                    case '\\':
-                        CurrentSymbol = Symbol.Slash;
+                    case '^':
+                        CurrentSymbol = Symbol.Arrow;
+                        currentCharacter = ioModule.NextCh();
+                        break;
+                    case ';':
+                        CurrentSymbol = Symbol.Semicolon;
                         currentCharacter = ioModule.NextCh();
                         break;
                 }
@@ -163,11 +218,40 @@ namespace PascalCompiler
         {
             string scannedSymbol = "";
             bool hasDecimalSeparator = false;
+            char prevCh = currentCharacter.Value;
+
             while (IsDigit(currentCharacter.Value) || IsDecimalSeparator(currentCharacter.Value))
             {
-                scannedSymbol += currentCharacter.Value.ToString();
                 if (IsDecimalSeparator(currentCharacter.Value))
+                {
+                    prevCh = currentCharacter.Value;
+                    currentCharacter = ioModule.NextCh();
+                    if (IsDecimalSeparator(currentCharacter.Value))
+                    {
+                        if (hasDecimalSeparator)
+                        {
+                            if (prevCh == '.')
+                            {
+                                CurrentSymbol = Symbol.IntConstant;
+                                IntConstant = int.Parse(scannedSymbol);
+                                SymbolQueue.Enqueue(Symbol.TwoPoints);
+                                ioModule.NextCh();
+                                return;
+                            }
+                            else
+                            {
+                                Error = new Error();
+                                ioModule.AddError();
+                                return;
+                            }
+                        }
+                    }
+
                     hasDecimalSeparator = true;
+                }
+
+                scannedSymbol += currentCharacter.Value.ToString();
+                prevCh = currentCharacter.Value;
                 currentCharacter = ioModule.NextCh();
             }
 

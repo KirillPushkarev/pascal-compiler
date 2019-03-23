@@ -75,8 +75,7 @@ namespace PascalCompiler
             Symbol? symbol = null; 
             do
             {
-                lexicalAnalizer.NextSymbol();
-                symbol = lexicalAnalizer.CurrentSymbol;
+                symbol = lexicalAnalizer.NextSymbol();
                 Console.WriteLine(symbol.Value.ToString());
             }
             while (symbol != null);

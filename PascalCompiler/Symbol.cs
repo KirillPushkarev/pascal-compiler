@@ -49,6 +49,20 @@ namespace PascalCompiler
         WithSy,
         IfSy,
         InSy,
-        OfSy
+        OfSy,
+        ProgramSy,
+        VarSy,
+        ProcedureSy,
+        BeginSy,
+        EndSy,
+
+
+        IntegerSy,
+        ArraySy,
+        RealSy,
+        CharSy,
+
+        TrueSy,
+        FalseSy,
     }
 }
