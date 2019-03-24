@@ -1,35 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using static PascalCompiler.Symbol;
 
 namespace PascalCompiler
 {
     class LexicalAnalyzer
     {
-        IOModule ioModule;
-        char? currentCharacter = ' ';
-        Dictionary<string, Symbol> keywordMapping = new Dictionary<string, Symbol>()
-        {
-            { "do", Symbol.DoSy },
-            { "if", Symbol.IfSy },
-            { "in", Symbol.InSy },
-            { "of", Symbol.OfSy },
-            { "type", Symbol.TypeSy },
-            { "program", Symbol.ProgramSy },
-            { "var", Symbol.VarSy },
-            { "procedure", Symbol.ProcedureSy },
-            { "array", Symbol.ArraySy },
-            { "integer", Symbol.IntegerSy },
-            { "real", Symbol.RealSy },
-        };
+        private IOModule ioModule;
 
-        private Symbol CurrentSymbol { get; set; }
-        private Queue<Symbol> SymbolQueue { get; set; } = new Queue<Symbol>();
+        private char? currentCharacter = ' ';
         private int currentLineNumber;
         private int currentPositionInLine;
+        private Queue<SymbolEnum> symbolQueue = new Queue<SymbolEnum>();
+
+        public SymbolEnum CurrentSymbol { get; set; }
+        public bool IsFinished { get; set; }
 
         public HashSet<string> NameTable { get; set; } = new HashSet<string>();
         public string StringConstant { get; set; }
@@ -44,29 +28,44 @@ namespace PascalCompiler
 
         public void NextSymbol()
         {
-            if (SymbolQueue.Count > 0)
+            if (symbolQueue.Count > 0)
             {
-                CurrentSymbol = SymbolQueue.Dequeue();
+                CurrentSymbol = symbolQueue.Dequeue();
                 return;
             }
 
-            while (currentCharacter.Value == ' ')
+            while (currentCharacter != null && (currentCharacter == ' ' || currentCharacter == '\n'))
             {
+                if (currentCharacter == '\n')
+                {
+                    currentLineNumber = ioModule.CurrentRow;
+                }
                 currentCharacter = ioModule.NextCh();
             }
 
             if (currentCharacter == null)
+            {
+                IsFinished = true;
                 return;
+            }
+
+            currentLineNumber = ioModule.CurrentRow;
+            currentPositionInLine = ioModule.CurrentPosition;
+            Error = null;
+
             ScanSymbol();
+
+            if (Error != null)
+                SkipToNextSymbol();
         }
 
         private void ScanSymbol()
         {
-            if (IsDigit(currentCharacter.Value))
+            if (LexicalUtils.IsDigit(currentCharacter.Value))
                 ScanNumber();
             else if (currentCharacter.Value == '\'')
                 ScanString();
-            else if (IsIdentifierStart(currentCharacter.Value))
+            else if (LexicalUtils.IsIdentifierStart(currentCharacter.Value))
                 ScanIdentifier();
             else
             {
@@ -76,142 +75,124 @@ namespace PascalCompiler
                         currentCharacter = ioModule.NextCh();
                         if (currentCharacter.Value == '=')
                         {
-                            CurrentSymbol = Symbol.LessEquals;
+                            CurrentSymbol = SymbolEnum.LessEquals;
                             currentCharacter = ioModule.NextCh();
                         }
                         else
                         {
                             if (currentCharacter.Value == '>')
                             {
-                                CurrentSymbol = Symbol.NotEquals;
+                                CurrentSymbol = SymbolEnum.NotEquals;
                                 currentCharacter = ioModule.NextCh();
                             }
                             else
-                                CurrentSymbol = Symbol.Less;
+                                CurrentSymbol = SymbolEnum.Less;
                         }
                         break;
                     case '>':
                         currentCharacter = ioModule.NextCh();
                         if (currentCharacter.Value == '=')
                         {
-                            CurrentSymbol = Symbol.GreaterEquals;
+                            CurrentSymbol = SymbolEnum.GreaterEquals;
                             currentCharacter = ioModule.NextCh();
                         }
                         else
                         {
-                              CurrentSymbol = Symbol.Less;
+                              CurrentSymbol = SymbolEnum.Less;
                         }
                         break;
                     case ':':
                         currentCharacter = ioModule.NextCh();
                         if (currentCharacter.Value == '=')
                         {
-                            CurrentSymbol = Symbol.Assign;
+                            CurrentSymbol = SymbolEnum.Assign;
                             currentCharacter = ioModule.NextCh();
                         }
                         else
-                            CurrentSymbol = Symbol.Colon;
+                        {
+                            CurrentSymbol = SymbolEnum.Colon;
+                        }
                         break;
                     case '+':
-                        CurrentSymbol = Symbol.Plus;
+                        CurrentSymbol = SymbolEnum.Plus;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '-':
-                        CurrentSymbol = Symbol.Minus;
+                        CurrentSymbol = SymbolEnum.Minus;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '*':
+                        CurrentSymbol = SymbolEnum.Star;
                         currentCharacter = ioModule.NextCh();
-                        if (currentCharacter.Value == ')')
-                        {
-                            CurrentSymbol = Symbol.RightComment;
-                            currentCharacter = ioModule.NextCh();
-                        }
-                        else
-                            CurrentSymbol = Symbol.Star;
                         break;
                     case '\\':
-                        CurrentSymbol = Symbol.Slash;
+                        CurrentSymbol = SymbolEnum.Slash;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '=':
-                        CurrentSymbol = Symbol.Equals;
+                        CurrentSymbol = SymbolEnum.Equals;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '(':
                         currentCharacter = ioModule.NextCh();
                         if (currentCharacter.Value == '*')
                         {
-                            CurrentSymbol = Symbol.LeftComment;
-                            currentCharacter = ioModule.NextCh();
+                            ScanMultilineComment();
                         }
                         else
-                            CurrentSymbol = Symbol.LeftRoundBracket;
+                        {
+                            CurrentSymbol = SymbolEnum.LeftRoundBracket;
+                        }
                         break;
                     case ')':
-                        CurrentSymbol = Symbol.RightRoundBracket;
+                        CurrentSymbol = SymbolEnum.RightRoundBracket;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '[':
-                        CurrentSymbol = Symbol.LeftSquareBracket;
+                        CurrentSymbol = SymbolEnum.LeftSquareBracket;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case ']':
-                        CurrentSymbol = Symbol.RightSquareBracket;
+                        CurrentSymbol = SymbolEnum.RightSquareBracket;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '{':
-                        CurrentSymbol = Symbol.LeftCurlyBracket;
+                        CurrentSymbol = SymbolEnum.LeftCurlyBracket;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '}':
-                        CurrentSymbol = Symbol.RightCurlyBracket;
+                        CurrentSymbol = SymbolEnum.RightCurlyBracket;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '.':
+                        CurrentSymbol = SymbolEnum.Point;
                         currentCharacter = ioModule.NextCh();
-                        if (currentCharacter.Value == '.')
-                        {
-                            CurrentSymbol = Symbol.TwoPoints;
-                            currentCharacter = ioModule.NextCh();
-                        }
-                        else
-                            CurrentSymbol = Symbol.Point;
                         break;
                     case ',':
-                        CurrentSymbol = Symbol.Comma;
+                        CurrentSymbol = SymbolEnum.Comma;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '^':
-                        CurrentSymbol = Symbol.Arrow;
+                        CurrentSymbol = SymbolEnum.Arrow;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case ';':
-                        CurrentSymbol = Symbol.Semicolon;
+                        CurrentSymbol = SymbolEnum.Semicolon;
                         currentCharacter = ioModule.NextCh();
+                        break;
+                    default:
+                        Error = ioModule.AddError(6, currentLineNumber, currentPositionInLine);
                         break;
                 }
             }
         }
 
-        private bool IsDigit(char ch)
+        private void SkipToNextSymbol()
         {
-            return Regex.IsMatch(ch.ToString(), @"^[0-9]+$");
-        }
-
-        private bool IsDecimalSeparator(char ch)
-        {
-            return Regex.IsMatch(ch.ToString(), @"^[\.]+$");
-        }
-
-        private bool IsIdentifierStart(char ch)
-        {
-            return Regex.IsMatch(ch.ToString(), @"^[a-z_]+$");
-        }
-
-        private bool IsIdentifierChar(char ch)
-        {
-            return Regex.IsMatch(ch.ToString(), @"^[a-z0-9_]+$");
+            while (currentCharacter != null && currentCharacter.Value != ' ' && currentCharacter.Value != '\n')
+            {
+                currentCharacter = ioModule.NextCh();
+            }
         }
 
         private void ScanNumber()
@@ -220,30 +201,23 @@ namespace PascalCompiler
             bool hasDecimalSeparator = false;
             char prevCh = currentCharacter.Value;
 
-            while (IsDigit(currentCharacter.Value) || IsDecimalSeparator(currentCharacter.Value))
+            while (LexicalUtils.IsDigit(currentCharacter.Value) || LexicalUtils.IsDecimalSeparator(currentCharacter.Value))
             {
-                if (IsDecimalSeparator(currentCharacter.Value))
+                if (LexicalUtils.IsDecimalSeparator(currentCharacter.Value))
                 {
-                    prevCh = currentCharacter.Value;
-                    currentCharacter = ioModule.NextCh();
-                    if (IsDecimalSeparator(currentCharacter.Value))
+                    if (hasDecimalSeparator)
                     {
-                        if (hasDecimalSeparator)
+                        if (prevCh == '.')
                         {
-                            if (prevCh == '.')
-                            {
-                                CurrentSymbol = Symbol.IntConstant;
-                                IntConstant = int.Parse(scannedSymbol);
-                                SymbolQueue.Enqueue(Symbol.TwoPoints);
-                                ioModule.NextCh();
-                                return;
-                            }
-                            else
-                            {
-                                Error = new Error();
-                                ioModule.AddError();
-                                return;
-                            }
+                            CurrentSymbol = SymbolEnum.IntConstant;
+                            IntConstant = int.Parse(scannedSymbol.Substring(0, scannedSymbol.Length - 1));
+                            symbolQueue.Enqueue(SymbolEnum.TwoPoints);
+                            currentCharacter = ioModule.NextCh();
+                            return;
+                        }
+                        else
+                        {
+                            return;
                         }
                     }
 
@@ -257,12 +231,12 @@ namespace PascalCompiler
 
             if (hasDecimalSeparator)
             {
-                CurrentSymbol = Symbol.FLoatConstant;
+                CurrentSymbol = SymbolEnum.FLoatConstant;
                 FloatConstant = double.Parse(scannedSymbol);
             }
             else
             {
-                CurrentSymbol = Symbol.IntConstant;
+                CurrentSymbol = SymbolEnum.IntConstant;
                 IntConstant = int.Parse(scannedSymbol);
             }
         }
@@ -270,34 +244,75 @@ namespace PascalCompiler
         private void ScanString()
         {
             string scannedSymbol = "";
-            while (currentCharacter.Value != '\'')
+            do
             {
-                scannedSymbol += currentCharacter.Value.ToString();
+                currentCharacter = ioModule.NextCh();
+                if (currentCharacter != '\'')
+                {
+                    scannedSymbol += currentCharacter.Value.ToString();
+                }
+            }
+            while (currentCharacter != null && currentCharacter != '\'' && currentCharacter != '\n');
+
+            if (currentCharacter != null && currentCharacter != '\n' && scannedSymbol.Length != 0)
+            {
+                CurrentSymbol = SymbolEnum.CharConstant;
+                StringConstant = scannedSymbol;
                 currentCharacter = ioModule.NextCh();
             }
-
-            CurrentSymbol = Symbol.CharConstant;
-            StringConstant = scannedSymbol;
+            else
+            {
+                Error = ioModule.AddError(75, currentLineNumber, currentPositionInLine);
+                if (currentCharacter == '\n')
+                {
+                    currentLineNumber = ioModule.CurrentRow;
+                }
+            }
         }
 
         private void ScanIdentifier()
         {
             string scannedSymbol = "";
-            while (IsIdentifierChar(currentCharacter.Value))
+            while (LexicalUtils.IsIdentifierChar(currentCharacter.Value))
             {
                 scannedSymbol += currentCharacter.Value.ToString();
                 currentCharacter = ioModule.NextCh();
             }
 
-            Symbol keyword;
-            if (keywordMapping.TryGetValue(scannedSymbol, out keyword))
+            SymbolEnum keyword;
+            if (Symbol.keywordMapping.TryGetValue(scannedSymbol, out keyword))
             {
                 CurrentSymbol = keyword;
             }
             else
             {
-                CurrentSymbol = Symbol.Identifier;
+                CurrentSymbol = SymbolEnum.Identifier;
                 NameTable.Add(scannedSymbol);
+            }
+        }
+
+        private void ScanMultilineComment()
+        {
+            char prevCharacter = '(';
+            do
+            {
+                prevCharacter = currentCharacter.Value;
+                if (prevCharacter == '\n')
+                {
+                    currentLineNumber = ioModule.CurrentRow;
+                }
+                currentCharacter = ioModule.NextCh();
+            }
+            while (currentCharacter != null && prevCharacter.ToString() + currentCharacter.ToString() != "*)");
+
+            if (currentCharacter != null)
+            {
+                currentCharacter = ioModule.NextCh();
+                NextSymbol();
+            }
+            else
+            {
+                Error = ioModule.AddError(86, currentLineNumber, currentPositionInLine);
             }
         }
     }

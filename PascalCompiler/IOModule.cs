@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.IO;
 
 namespace PascalCompiler
 {
     class IOModule
     {
+        private string listingFilename;
+
         StreamReader inputFile;
         StreamWriter listing;
         ErrorTable errorTable;
@@ -19,8 +16,9 @@ namespace PascalCompiler
 
         public IOModule(ErrorTable errorTable, string sourceFilename, string listingFilename)
         {
-            inputFile = new StreamReader(sourceFilename);
-            listing = new StreamWriter(listingFilename);
+            this.inputFile = new StreamReader(sourceFilename);
+            this.listingFilename = listingFilename;
+            this.listing = new StreamWriter(listingFilename);
             this.errorTable = errorTable;
 
             ReadNextLine();
@@ -36,40 +34,51 @@ namespace PascalCompiler
             {
                 WriteNextLineToListing();
                 ReadNextLine();
-                if (buffer == null)
-                    return null;
 
                 CurrentRow++;
                 CurrentPosition = 0;
                 errorTable.AddRow();
+
+                if (buffer == null)
+                    return null;
             }
 
             return buffer[CurrentPosition++];
         }
 
-        public void AddError(int code)
+        public Error AddError(int code, int row, int position)
         {
-            errorTable.Add(CurrentRow, CurrentPosition, code);
-        }
+            Error error = errorTable.Add(code, row, position);
 
-        public void AddError(int code, int row, int position)
-        {
-            errorTable.Add(row, position, code);
+            if (buffer == null)
+            {
+                listing = new StreamWriter(listingFilename, true);
+                listing.WriteLine(("******* ") + string.Format("{0," + (error.Position - 1) + "}", "") + "^Ошибка с кодом " + error.Code);
+                listing.WriteLine(("******* ") + error.Message);
+                listing.Close();
+            }
+
+            return error;
         }
 
         private void ReadNextLine()
         {
             buffer = inputFile.ReadLine();
+
             if (buffer == null)
             {
                 inputFile.Close();
                 listing.Close();
+                return;
             }
+
+            buffer += "\n";
         }
 
         private void WriteNextLineToListing()
         {
-            listing.WriteLine("  " + (CurrentRow + 1).ToString().PadLeft(3, ' ') + "   " + buffer);
+            buffer = buffer.Replace("\n", "\r\n");
+            listing.Write("  " + (CurrentRow + 1).ToString().PadLeft(3, ' ') + "   " + buffer);
             foreach (var error in errorTable.Errors[CurrentRow])
             {
                 listing.WriteLine(("******* ") + string.Format("{0," + (error.Position - 1) + "}", "") + "^Ошибка с кодом " + error.Code);

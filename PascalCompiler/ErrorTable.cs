@@ -30,19 +30,23 @@ namespace PascalCompiler
             Errors.Add(new List<Error>());
         }
 
-        public void Add(int row, Error error)
+        public Error Add(int row, Error error)
         {
             if (Errors[row].Count >= MAX_ERROR_IN_ROW_COUNT ||
-                ErrorCount > MAX_ERROR_TOTAL_COUNT) return;
+                ErrorCount > MAX_ERROR_TOTAL_COUNT) return null;
 
             Errors[row].Add(error);
             ErrorCount++;
+
+            return error;
         }
 
-        public void Add(int row, int position, int code)
+        public Error Add(int code, int row, int position)
         {
             var error = new Error { Code = code, Position = position, Message = ErrorDigest[code] };
             Add(row, error);
+
+            return error;
         }
     }
 }

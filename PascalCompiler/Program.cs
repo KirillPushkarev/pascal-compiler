@@ -16,7 +16,6 @@ namespace PascalCompiler
 
         static void TestIOModule()
         {
-            // Прочитать справочник ошибок
             var errorDigest = new Dictionary<int, string>();
             string line;
             var errorDigestFile = new StreamReader(@".\error_digest.txt", Encoding.Default);
@@ -30,7 +29,6 @@ namespace PascalCompiler
             }
             errorDigestFile.Close();
 
-            // Прочитать список ошибок
             var errorTable = new ErrorTable(errorDigest, 59);
             var errorFile = new StreamReader(@".\errors.txt");
             while ((line = errorFile.ReadLine()) != null)
@@ -54,7 +52,6 @@ namespace PascalCompiler
 
         static void TestLexicalAnalyzer()
         {
-            // Прочитать справочник ошибок
             var errorDigest = new Dictionary<int, string>();
             string line;
             var errorDigestFile = new StreamReader(@".\error_digest.txt", Encoding.Default);
@@ -70,15 +67,27 @@ namespace PascalCompiler
 
             var errorTable = new ErrorTable(errorDigest);
 
-            var ioModule = new IOModule(errorTable, @".\1.pas", @".\listing.txt");
+            var ioModule = new IOModule(errorTable, @".\2.pas", @".\listing.txt");
             var lexicalAnalizer = new LexicalAnalyzer(ioModule);
-            Symbol? symbol = null; 
+
+            Symbol.SymbolEnum? symbol = null;
+            Error error = null;
             do
             {
-                symbol = lexicalAnalizer.NextSymbol();
-                Console.WriteLine(symbol.Value.ToString());
+                lexicalAnalizer.NextSymbol();
+
+                if (lexicalAnalizer.Error != null)
+                {
+                    error = lexicalAnalizer.Error;
+                    Console.WriteLine(error.Message);
+                }
+                else
+                {
+                    symbol = lexicalAnalizer.CurrentSymbol;
+                    Console.WriteLine(symbol.Value.ToString());
+                }
             }
-            while (symbol != null);
+            while (!lexicalAnalizer.IsFinished);
         }
     }
 }
