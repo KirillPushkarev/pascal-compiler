@@ -2,7 +2,7 @@
 
 namespace PascalCompiler
 {
-    class IOModule
+    public class IOModule
     {
         private string listingFilename;
 

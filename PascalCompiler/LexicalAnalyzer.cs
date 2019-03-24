@@ -3,7 +3,7 @@ using static PascalCompiler.Symbol;
 
 namespace PascalCompiler
 {
-    class LexicalAnalyzer
+    public class LexicalAnalyzer
     {
         private IOModule ioModule;
 
@@ -165,7 +165,7 @@ namespace PascalCompiler
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '.':
-                        CurrentSymbol = SymbolEnum.Point;
+                        CurrentSymbol = SymbolEnum.Dot;
                         currentCharacter = ioModule.NextCh();
                         break;
                     case ',':
@@ -211,7 +211,7 @@ namespace PascalCompiler
                         {
                             CurrentSymbol = SymbolEnum.IntConstant;
                             IntConstant = int.Parse(scannedSymbol.Substring(0, scannedSymbol.Length - 1));
-                            symbolQueue.Enqueue(SymbolEnum.TwoPoints);
+                            symbolQueue.Enqueue(SymbolEnum.TwoDots);
                             currentCharacter = ioModule.NextCh();
                             return;
                         }
