@@ -6,10 +6,12 @@ namespace PascalCompiler
     {
         private string listingFilename;
 
-        StreamReader inputFile;
-        StreamWriter listing;
-        ErrorTable errorTable;
-        string buffer;
+        private StreamReader inputFile;
+        private StreamWriter listing;
+        private ErrorTable errorTable;
+
+        private string buffer;
+        private int errorCount;
 
         public int CurrentRow { get; private set; } = 0;
         public int CurrentPosition { get; private set; } = 0;
@@ -48,12 +50,12 @@ namespace PascalCompiler
 
         public Error AddError(int code, int row, int position)
         {
-            Error error = errorTable.Add(code, row, position);
+            Error error = errorTable.Add(code, row, position, errorCount++);
 
             if (buffer == null)
             {
                 listing = new StreamWriter(listingFilename, true);
-                listing.WriteLine(("******* ") + string.Format("{0," + (error.Position - 1) + "}", "") + "^Ошибка с кодом " + error.Code);
+                listing.WriteLine(FormatErrorNumber(error));
                 listing.WriteLine(("******* ") + error.Message);
                 listing.Close();
             }
@@ -81,9 +83,17 @@ namespace PascalCompiler
             listing.Write("  " + (CurrentRow + 1).ToString().PadLeft(3, ' ') + "   " + buffer);
             foreach (var error in errorTable.Errors[CurrentRow])
             {
-                listing.WriteLine(("******* ") + string.Format("{0," + (error.Position - 1) + "}", "") + "^Ошибка с кодом " + error.Code);
+                listing.WriteLine(FormatErrorNumber(error));
                 listing.WriteLine(("******* ") + error.Message);
             }
+        }
+
+        private string FormatErrorNumber(Error error)
+        {
+            return
+                ("**") + string.Format("{0:D3}", (error.Number + 1)) + ("** ") +
+                string.Format("{0," + (error.Position - 1) + "}", "") +
+                "^Ошибка с кодом " + error.Code;
         }
     }
 }

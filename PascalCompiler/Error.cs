@@ -6,10 +6,11 @@ using System.Threading.Tasks;
 
 namespace PascalCompiler
 {
-    class Error
+    public class Error
     {
         public int Code { get; set; }
         public int Position { get; set; }
         public string Message { get; set; }
+        public int Number { get; set; }
     }
 }

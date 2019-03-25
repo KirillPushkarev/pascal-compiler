@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace PascalCompiler
 {
-    class ErrorTable
+    public class ErrorTable
     {
         const int MAX_ERROR_IN_ROW_COUNT = 5;
         const int MAX_ERROR_TOTAL_COUNT = 20;
@@ -41,9 +41,9 @@ namespace PascalCompiler
             return error;
         }
 
-        public Error Add(int code, int row, int position)
+        public Error Add(int code, int row, int position, int number)
         {
-            var error = new Error { Code = code, Position = position, Message = ErrorDigest[code] };
+            var error = new Error { Code = code, Position = position, Message = ErrorDigest[code], Number = number };
             Add(row, error);
 
             return error;
