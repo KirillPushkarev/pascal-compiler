@@ -8,8 +8,6 @@ namespace PascalCompiler
         private IOModule ioModule;
 
         private char? currentCharacter = ' ';
-        private int currentLineNumber;
-        private int currentPositionInLine;
         private Queue<SymbolEnum> symbolQueue = new Queue<SymbolEnum>();
 
         public SymbolEnum CurrentSymbol { get; set; }
@@ -20,6 +18,8 @@ namespace PascalCompiler
         public int IntConstant { get; set; }
         public double FloatConstant { get; set; }
         public Error Error { get; set; }
+        public int CurrentLineNumber { get; set; }
+        public int CurrentPositionInLine { get; set; }
 
         public LexicalAnalyzer(IOModule ioModule)
         {
@@ -38,7 +38,7 @@ namespace PascalCompiler
             {
                 if (currentCharacter == '\n')
                 {
-                    currentLineNumber = ioModule.CurrentRow;
+                    CurrentLineNumber = ioModule.CurrentRow;
                 }
                 currentCharacter = ioModule.NextCh();
             }
@@ -49,8 +49,8 @@ namespace PascalCompiler
                 return;
             }
 
-            currentLineNumber = ioModule.CurrentRow;
-            currentPositionInLine = ioModule.CurrentPosition;
+            CurrentLineNumber = ioModule.CurrentRow;
+            CurrentPositionInLine = ioModule.CurrentPosition;
             Error = null;
 
             ScanSymbol();
@@ -63,7 +63,7 @@ namespace PascalCompiler
         {
             if (LexicalUtils.IsDigit(currentCharacter.Value))
                 ScanNumber();
-            else if (currentCharacter.Value == '\'')
+            else if (LexicalUtils.IsStringConstantStart(currentCharacter.Value))
                 ScanString();
             else if (LexicalUtils.IsIdentifierStart(currentCharacter.Value))
                 ScanIdentifier();
@@ -181,7 +181,7 @@ namespace PascalCompiler
                         currentCharacter = ioModule.NextCh();
                         break;
                     default:
-                        Error = ioModule.AddError(6, currentLineNumber, currentPositionInLine);
+                        Error = ioModule.AddError(6, CurrentLineNumber, CurrentPositionInLine);
                         break;
                 }
             }
@@ -262,10 +262,10 @@ namespace PascalCompiler
             }
             else
             {
-                Error = ioModule.AddError(75, currentLineNumber, currentPositionInLine);
+                Error = ioModule.AddError(75, CurrentLineNumber, CurrentPositionInLine);
                 if (currentCharacter == '\n')
                 {
-                    currentLineNumber = ioModule.CurrentRow;
+                    CurrentLineNumber = ioModule.CurrentRow;
                 }
             }
         }
@@ -299,7 +299,7 @@ namespace PascalCompiler
                 prevCharacter = currentCharacter.Value;
                 if (prevCharacter == '\n')
                 {
-                    currentLineNumber = ioModule.CurrentRow;
+                    CurrentLineNumber = ioModule.CurrentRow;
                 }
                 currentCharacter = ioModule.NextCh();
             }
@@ -312,7 +312,7 @@ namespace PascalCompiler
             }
             else
             {
-                Error = ioModule.AddError(86, currentLineNumber, currentPositionInLine);
+                Error = ioModule.AddError(86, CurrentLineNumber, CurrentPositionInLine);
             }
         }
     }

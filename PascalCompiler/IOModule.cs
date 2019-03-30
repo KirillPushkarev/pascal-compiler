@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using static PascalCompiler.Symbol;
 
 namespace PascalCompiler
 {
@@ -61,6 +62,11 @@ namespace PascalCompiler
             }
 
             return error;
+        }
+
+        public Error AddError(int row, int position, SymbolEnum expectedSymbol)
+        {
+            return null;
         }
 
         private void ReadNextLine()

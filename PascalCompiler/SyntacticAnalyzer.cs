@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static PascalCompiler.Symbol;
+﻿using static PascalCompiler.Symbol;
 
 namespace PascalCompiler
 {
@@ -31,7 +26,7 @@ namespace PascalCompiler
             }
             else
             {
-
+                ioModule.AddError(lexicalAnalyzer.CurrentLineNumber, lexicalAnalyzer.CurrentPositionInLine, expectedSymbol);
             }
         }
 
@@ -74,6 +69,15 @@ namespace PascalCompiler
         private void VarPart()
         {
             Accept(SymbolEnum.VarSy);
+            while (lexicalAnalyzer.CurrentSymbol == SymbolEnum.Identifier)
+            {
+                VarDeclaration();
+                Accept(SymbolEnum.Semicolon);
+            }
+        }
+
+        private void VarDeclaration()
+        {
             Accept(SymbolEnum.Identifier);
             while (lexicalAnalyzer.CurrentSymbol == SymbolEnum.Comma)
             {
@@ -84,12 +88,38 @@ namespace PascalCompiler
             Type();
         }
 
-        private void VarDeclaration()
+        private void Type()
         {
-
+            SimpleType();
         }
 
-        private void Type()
+        private void SimpleType()
+        {
+            switch (lexicalAnalyzer.CurrentSymbol)
+            {
+                case SymbolEnum.BooleanSy:
+                case SymbolEnum.ByteSy:
+                case SymbolEnum.CharSy:
+                case SymbolEnum.IntegerSy:
+                case SymbolEnum.RealSy:
+                case SymbolEnum.StringSy:
+                    Accept(lexicalAnalyzer.CurrentSymbol);
+                    break;
+                case SymbolEnum.IntConstant:
+                case SymbolEnum.CharConstant:
+                    SubrangeType(lexicalAnalyzer.CurrentSymbol);
+                    break;
+            }
+        }
+
+        private void SubrangeType(SymbolEnum symbol)
+        {
+            Accept(symbol);
+            Accept(SymbolEnum.TwoDots);
+            Accept(symbol);
+        }
+
+        private void TypeIdentifier()
         {
 
         }
@@ -100,8 +130,48 @@ namespace PascalCompiler
 
         private void StatementPart()
         {
-            Accept(SymbolEnum.BeginSy);
-            Accept(SymbolEnum.EndSy);
+            CompoundStatement();
+        }
+
+        private void CompoundStatement()
+        {
+
+        }
+
+        private void SimpleStatement()
+        {
+
+        }
+
+        private void AssignmentStatement()
+        {
+            Variable();
+            Accept(SymbolEnum.Assign);
+        }
+
+        private void Variable()
+        {
+            Accept(SymbolEnum.Identifier);
+        }
+
+        private void Expression()
+        {
+            SimpleExpression();
+        }
+
+        private void SimpleExpression()
+        {
+
+        }
+
+        private void Term()
+        {
+
+        }
+
+        private void Factor()
+        {
+
         }
     }
 }

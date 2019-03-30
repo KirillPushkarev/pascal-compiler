@@ -23,5 +23,10 @@ namespace PascalCompiler
         {
             return Regex.IsMatch(ch.ToString(), @"[a-z0-9_]$", RegexOptions.IgnoreCase);
         }
+
+        public static bool IsStringConstantStart(char ch)
+        {
+            return Regex.IsMatch(ch.ToString(), @"[']$", RegexOptions.IgnoreCase);
+        }
     }
 }
