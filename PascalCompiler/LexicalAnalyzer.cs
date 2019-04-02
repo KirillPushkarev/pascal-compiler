@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
 using static PascalCompiler.Symbol;
 
 namespace PascalCompiler
@@ -11,15 +13,19 @@ namespace PascalCompiler
         private Queue<SymbolEnum> symbolQueue = new Queue<SymbolEnum>();
 
         public SymbolEnum CurrentSymbol { get; set; }
+        public int CurrentLineNumber { get; set; }
+        public int CurrentPositionInLine { get; set; }
+        public Error Error { get; set; }
         public bool IsFinished { get; set; }
 
         public HashSet<string> NameTable { get; set; } = new HashSet<string>();
         public string StringConstant { get; set; }
         public int IntConstant { get; set; }
         public double FloatConstant { get; set; }
-        public Error Error { get; set; }
-        public int CurrentLineNumber { get; set; }
-        public int CurrentPositionInLine { get; set; }
+
+        private const int MAX_INT_CONSTANT = 32767;
+        private const double MAX_FLOAT_CONSTANT = 1.7 * 10E+38;
+        private const int MAX_STRING_CONSTANT_LENGTH = 32;
 
         public LexicalAnalyzer(IOModule ioModule)
         {
@@ -36,10 +42,6 @@ namespace PascalCompiler
 
             while (currentCharacter != null && (currentCharacter == ' ' || currentCharacter == '\n'))
             {
-                if (currentCharacter == '\n')
-                {
-                    CurrentLineNumber = ioModule.CurrentRow;
-                }
                 currentCharacter = ioModule.NextCh();
             }
 
@@ -57,6 +59,12 @@ namespace PascalCompiler
 
             if (Error != null)
                 SkipToNextSymbol();
+
+            if (currentCharacter == null)
+            {
+                IsFinished = true;
+                return;
+            }
         }
 
         private void ScanSymbol()
@@ -207,7 +215,7 @@ namespace PascalCompiler
                 {
                     if (hasDecimalSeparator)
                     {
-                        if (prevCh == '.')
+                        if (LexicalUtils.IsDecimalSeparator(prevCh))
                         {
                             CurrentSymbol = SymbolEnum.IntConstant;
                             IntConstant = int.Parse(scannedSymbol.Substring(0, scannedSymbol.Length - 1));
@@ -217,13 +225,12 @@ namespace PascalCompiler
                         }
                         else
                         {
-                            return;
+                            break;
                         }
                     }
 
                     hasDecimalSeparator = true;
                 }
-
                 scannedSymbol += currentCharacter.Value.ToString();
                 prevCh = currentCharacter.Value;
                 currentCharacter = ioModule.NextCh();
@@ -231,13 +238,29 @@ namespace PascalCompiler
 
             if (hasDecimalSeparator)
             {
-                CurrentSymbol = SymbolEnum.FLoatConstant;
-                FloatConstant = double.Parse(scannedSymbol);
+                double result;
+                if (double.TryParse(scannedSymbol, NumberStyles.Any, CultureInfo.InvariantCulture, out result) && Math.Abs(result) < MAX_FLOAT_CONSTANT)
+                {
+                    CurrentSymbol = SymbolEnum.FLoatConstant;
+                    FloatConstant = result;
+                }
+                else
+                {
+                    Error = ioModule.AddError(207, CurrentLineNumber, CurrentPositionInLine);
+                }
             }
             else
             {
-                CurrentSymbol = SymbolEnum.IntConstant;
-                IntConstant = int.Parse(scannedSymbol);
+                int result;
+                if (int.TryParse(scannedSymbol, out result) && Math.Abs(result) < MAX_INT_CONSTANT)
+                {
+                    CurrentSymbol = SymbolEnum.IntConstant;
+                    IntConstant = result;
+                }
+                else
+                {
+                    Error = ioModule.AddError(203, CurrentLineNumber, CurrentPositionInLine);
+                }
             }
         }
 
@@ -247,12 +270,18 @@ namespace PascalCompiler
             do
             {
                 currentCharacter = ioModule.NextCh();
-                if (currentCharacter != '\'')
+                if (currentCharacter != '\'' && scannedSymbol.Length < MAX_STRING_CONSTANT_LENGTH)
                 {
                     scannedSymbol += currentCharacter.Value.ToString();
                 }
             }
             while (currentCharacter != null && currentCharacter != '\'' && currentCharacter != '\n');
+
+            if (scannedSymbol.Length >= MAX_STRING_CONSTANT_LENGTH)
+            {
+                Error = ioModule.AddError(75, CurrentLineNumber, CurrentPositionInLine);
+                return;
+            }
 
             if (currentCharacter != null && currentCharacter != '\n' && scannedSymbol.Length != 0)
             {
@@ -263,10 +292,6 @@ namespace PascalCompiler
             else
             {
                 Error = ioModule.AddError(75, CurrentLineNumber, CurrentPositionInLine);
-                if (currentCharacter == '\n')
-                {
-                    CurrentLineNumber = ioModule.CurrentRow;
-                }
             }
         }
 
@@ -297,13 +322,12 @@ namespace PascalCompiler
             do
             {
                 prevCharacter = currentCharacter.Value;
-                if (prevCharacter == '\n')
-                {
-                    CurrentLineNumber = ioModule.CurrentRow;
-                }
                 currentCharacter = ioModule.NextCh();
             }
             while (currentCharacter != null && prevCharacter.ToString() + currentCharacter.ToString() != "*)");
+
+            CurrentLineNumber = ioModule.CurrentRow;
+            CurrentPositionInLine = ioModule.CurrentPosition;
 
             if (currentCharacter != null)
             {

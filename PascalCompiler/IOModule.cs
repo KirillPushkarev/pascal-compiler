@@ -1,12 +1,11 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using static PascalCompiler.Symbol;
 
 namespace PascalCompiler
 {
     public class IOModule
     {
-        private string listingFilename;
-
         private StreamReader inputFile;
         private StreamWriter listing;
         private ErrorTable errorTable;
@@ -19,9 +18,8 @@ namespace PascalCompiler
 
         public IOModule(ErrorTable errorTable, string sourceFilename, string listingFilename)
         {
-            this.inputFile = new StreamReader(sourceFilename);
-            this.listingFilename = listingFilename;
-            this.listing = new StreamWriter(listingFilename);
+            inputFile = new StreamReader(sourceFilename);
+            listing = new StreamWriter(listingFilename);
             this.errorTable = errorTable;
 
             ReadNextLine();
@@ -39,11 +37,12 @@ namespace PascalCompiler
                 ReadNextLine();
 
                 CurrentRow++;
-                CurrentPosition = 0;
                 errorTable.AddRow();
 
                 if (buffer == null)
                     return null;
+                else
+                    CurrentPosition = 0;
             }
 
             return buffer[CurrentPosition++];
@@ -51,42 +50,33 @@ namespace PascalCompiler
 
         public Error AddError(int code, int row, int position)
         {
-            Error error = errorTable.Add(code, row, position, errorCount++);
-
+            var error = errorTable.Add(code, row, position, errorCount++);
             if (buffer == null)
-            {
-                listing = new StreamWriter(listingFilename, true);
-                listing.WriteLine(FormatErrorNumber(error));
-                listing.WriteLine(("******* ") + error.Message);
-                listing.Close();
-            }
-
+                WriteCurrentErrorsToListing();
             return error;
         }
 
         public Error AddError(int row, int position, SymbolEnum expectedSymbol)
         {
-            return null;
+            throw new NotImplementedException();
         }
 
         private void ReadNextLine()
         {
             buffer = inputFile.ReadLine();
-
-            if (buffer == null)
-            {
-                inputFile.Close();
-                listing.Close();
-                return;
-            }
-
-            buffer += "\n";
+            if (buffer != null)
+                buffer += "\n";
         }
 
         private void WriteNextLineToListing()
         {
             buffer = buffer.Replace("\n", "\r\n");
             listing.Write("  " + (CurrentRow + 1).ToString().PadLeft(3, ' ') + "   " + buffer);
+            WriteCurrentErrorsToListing();
+        }
+
+        private void WriteCurrentErrorsToListing()
+        {
             foreach (var error in errorTable.Errors[CurrentRow])
             {
                 listing.WriteLine(FormatErrorNumber(error));
@@ -100,6 +90,12 @@ namespace PascalCompiler
                 ("**") + string.Format("{0:D3}", (error.Number + 1)) + ("** ") +
                 string.Format("{0," + (error.Position - 1) + "}", "") +
                 "^Ошибка с кодом " + error.Code;
+        }
+
+        public void Dispose()
+        {
+            inputFile.Close();
+            listing.Close();
         }
     }
 }

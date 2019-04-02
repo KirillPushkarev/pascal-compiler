@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace PascalCompiler
 {
@@ -11,26 +9,16 @@ namespace PascalCompiler
     {
         static void Main(string[] args)
         {
-            TestSyntacticAnalyzer();
+            TestLexicalAnalyzer();
         }
 
         static void TestIOModule()
         {
-            var errorDigest = new Dictionary<int, string>();
-            string line;
-            var errorDigestFile = new StreamReader(@".\error_digest.txt", Encoding.Default);
-            errorDigestFile.ReadLine();
-            while ((line = errorDigestFile.ReadLine()) != null)
-            {
-                var lineParts = line.Split(':');
-                int errorCode = int.Parse(lineParts[0]);
-                string errorMessage = lineParts[1];
-                errorDigest.Add(errorCode, errorMessage);
-            }
-            errorDigestFile.Close();
-
+            var errorDigest = ReadErrorDigest();
             var errorTable = new ErrorTable(errorDigest, 59);
+
             var errorFile = new StreamReader(@".\errors.txt");
+            string line;
             while ((line = errorFile.ReadLine()) != null)
             {
                 var lineParts = line.Split();
@@ -52,26 +40,14 @@ namespace PascalCompiler
 
         static void TestLexicalAnalyzer()
         {
-            var errorDigest = new Dictionary<int, string>();
-            string line;
-            var errorDigestFile = new StreamReader(@".\error_digest.txt", Encoding.Default);
-            errorDigestFile.ReadLine();
-            while ((line = errorDigestFile.ReadLine()) != null)
-            {
-                var lineParts = line.Split(':');
-                int errorCode = int.Parse(lineParts[0]);
-                string errorMessage = lineParts[1];
-                errorDigest.Add(errorCode, errorMessage);
-            }
-            errorDigestFile.Close();
-
+            var errorDigest = ReadErrorDigest();
             var errorTable = new ErrorTable(errorDigest);
 
-            var ioModule = new IOModule(errorTable, @".\2.pas", @".\listing.txt");
+            var ioModule = new IOModule(errorTable, @"..\..\data\test_lex_3.pas", @"..\..\data\listing_lex_3.txt");
             var lexicalAnalyzer = new LexicalAnalyzer(ioModule);
 
-            Symbol.SymbolEnum? symbol = null;
-            Error error = null;
+            Symbol.SymbolEnum symbol;
+            Error error;
             do
             {
                 lexicalAnalyzer.NextSymbol();
@@ -84,17 +60,29 @@ namespace PascalCompiler
                 else
                 {
                     symbol = lexicalAnalyzer.CurrentSymbol;
-                    Console.WriteLine(symbol.Value.ToString());
+                    Console.WriteLine(symbol.ToString());
                 }
             }
             while (!lexicalAnalyzer.IsFinished);
+            ioModule.Dispose();
         }
 
         static void TestSyntacticAnalyzer()
         {
+            var errorDigest = ReadErrorDigest();
+            var errorTable = new ErrorTable(errorDigest);
+
+            var ioModule = new IOModule(errorTable, @".\2.pas", @".\listing.txt");
+            var lexicalAnalyzer = new LexicalAnalyzer(ioModule);
+            var syntacticAnalyzer = new SyntacticAnalyzer(ioModule, lexicalAnalyzer);
+            syntacticAnalyzer.Run();
+        }
+
+        static Dictionary<int, string> ReadErrorDigest()
+        {
             var errorDigest = new Dictionary<int, string>();
             string line;
-            var errorDigestFile = new StreamReader(@".\error_digest.txt", Encoding.Default);
+            var errorDigestFile = new StreamReader(@"..\..\data\error_digest.txt", Encoding.Default);
             errorDigestFile.ReadLine();
             while ((line = errorDigestFile.ReadLine()) != null)
             {
@@ -105,12 +93,7 @@ namespace PascalCompiler
             }
             errorDigestFile.Close();
 
-            var errorTable = new ErrorTable(errorDigest);
-
-            var ioModule = new IOModule(errorTable, @".\2.pas", @".\listing.txt");
-            var lexicalAnalyzer = new LexicalAnalyzer(ioModule);
-            var syntacticAnalyzer = new SyntacticAnalyzer(ioModule, lexicalAnalyzer);
-            syntacticAnalyzer.Run();
+            return errorDigest;
         }
     }
 }

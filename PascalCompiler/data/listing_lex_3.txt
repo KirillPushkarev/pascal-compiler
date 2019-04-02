@@ -1,0 +1,46 @@
+    1   program p1;
+    2   var
+    3      n: array [1..10] of integer;   (* n is an array of 10 integers *)
+    4      i, j: integer;
+    5      s: string;
+    6      r: real;
+    7   
+    8   begin
+    9      (* initialize elements of array n to 0 *)       
+   10      $
+**001**    ^Ошибка с кодом 6
+*******  запрещенный символ
+   11      for i := 1 to 10 do
+   12          n[ i ] := i + 100;   (* set element 
+   13   	   at location i to i + 100 *)
+   14       (* output each array element's value *)
+   15      
+   16      for j:= 1 to 10 do
+   17         writeln('Element[, j, '] = ', n[j] );
+**002**                                  ^Ошибка с кодом 75
+*******  ошибка в символьной константе
+   18   
+   19      r := 123.456;
+   20      r := 123..;
+   21      r := 123.456.789;
+   22      r := 12300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000.01;
+**003**         ^Ошибка с кодом 207
+*******  слишком большая вещественная константа
+   23   
+   24      i := 30000;
+   25      i := 100000000000000000000;
+**004**         ^Ошибка с кодом 203
+*******  целая константа превышает предел
+   26   
+   27      s := 'abc';
+   28      s := '';
+**005**         ^Ошибка с кодом 75
+*******  ошибка в символьной константе
+   29      s := 'gshgkjdfhdkjhdfbdajdfadfhmbcadmfhdjgvdfvbdxbmcvbdjafghadfgeyrgfaskhfgeaigfafgadhfgweyfad7tgfdshfggejgidufgkesfgdkahfgbdkfgadfdfgdfdfgeygvfjcwegecejfgcycgajfgef';
+**006**         ^Ошибка с кодом 75
+*******  ошибка в символьной константе
+   30   
+   31      (* not closed comment
+   32   end.
+**007**     ^Ошибка с кодом 86
+*******  комментарий не закрыт
