@@ -43,7 +43,7 @@ namespace PascalCompiler
             var errorDigest = ReadErrorDigest();
             var errorTable = new ErrorTable(errorDigest);
 
-            var ioModule = new IOModule(errorTable, @"..\..\data\test_lex_3.pas", @"..\..\data\listing_lex_3.txt");
+            var ioModule = new IOModule(errorTable, @"..\..\data\test_lex_3.pas", @"..\..\data\listing.txt");
             var lexicalAnalyzer = new LexicalAnalyzer(ioModule);
 
             Symbol.SymbolEnum symbol;

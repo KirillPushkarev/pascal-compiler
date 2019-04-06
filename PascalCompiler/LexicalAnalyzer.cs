@@ -19,6 +19,7 @@ namespace PascalCompiler
         public bool IsFinished { get; set; }
 
         public HashSet<string> NameTable { get; set; } = new HashSet<string>();
+        public string IdentifierName { get; set; }
         public string StringConstant { get; set; }
         public int IntConstant { get; set; }
         public double FloatConstant { get; set; }
@@ -239,9 +240,9 @@ namespace PascalCompiler
             if (hasDecimalSeparator)
             {
                 double result;
-                if (double.TryParse(scannedSymbol, NumberStyles.Any, CultureInfo.InvariantCulture, out result) && Math.Abs(result) < MAX_FLOAT_CONSTANT)
+                if (double.TryParse(scannedSymbol, NumberStyles.Any, CultureInfo.InvariantCulture, out result) && result < MAX_FLOAT_CONSTANT)
                 {
-                    CurrentSymbol = SymbolEnum.FLoatConstant;
+                    CurrentSymbol = SymbolEnum.RealConstant;
                     FloatConstant = result;
                 }
                 else
@@ -252,7 +253,7 @@ namespace PascalCompiler
             else
             {
                 int result;
-                if (int.TryParse(scannedSymbol, out result) && Math.Abs(result) < MAX_INT_CONSTANT)
+                if (int.TryParse(scannedSymbol, out result) && result < MAX_INT_CONSTANT)
                 {
                     CurrentSymbol = SymbolEnum.IntConstant;
                     IntConstant = result;
@@ -313,6 +314,7 @@ namespace PascalCompiler
             {
                 CurrentSymbol = SymbolEnum.Identifier;
                 NameTable.Add(scannedSymbol);
+                IdentifierName = scannedSymbol;
             }
         }
 

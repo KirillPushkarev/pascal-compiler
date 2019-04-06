@@ -22,33 +22,25 @@ namespace PascalCompiler
 
         private void Accept(SymbolEnum expectedSymbol)
         {
-            if (lexicalAnalyzer.Error != null)
-            {
-                throw new Exception("Ошибка в лексическом анализаторе.");
-            }
-
             if (lexicalAnalyzer.CurrentSymbol != expectedSymbol)
             {
                 ioModule.AddError(
+                    symbolToErrorCodeMapping[expectedSymbol],
                     lexicalAnalyzer.CurrentLineNumber, 
-                    lexicalAnalyzer.CurrentPositionInLine, 
-                    expectedSymbol
+                    lexicalAnalyzer.CurrentPositionInLine
                     );
-
-                throw new Exception("Ошибка в синтаксическом анализаторе.");
             }
 
-            lexicalAnalyzer.NextSymbol();
+            NextSymbol();
         }
 
         private void NextSymbol()
         {
-            if (lexicalAnalyzer.Error != null)
+            do
             {
-                throw new Exception("Ошибка в лексическом анализаторе.");
+                lexicalAnalyzer.NextSymbol();
             }
-
-            lexicalAnalyzer.NextSymbol();
+            while (lexicalAnalyzer.Error != null && !lexicalAnalyzer.IsFinished);
         }
 
         public void Run()
@@ -93,10 +85,10 @@ namespace PascalCompiler
 
         private void TypeDefinitionPart()
         {
-            if (lexicalAnalyzer.CurrentSymbol == SymbolEnum.TypeSy)
+            if (CurrentSymbol == SymbolEnum.TypeSy)
             {
-                Accept(SymbolEnum.TypeSy);
-                while (lexicalAnalyzer.CurrentSymbol == SymbolEnum.Identifier)
+                NextSymbol();
+                while (CurrentSymbol == SymbolEnum.Identifier)
                 {
                     Accept(SymbolEnum.Identifier);
                     Accept(SymbolEnum.Equals);
@@ -114,18 +106,16 @@ namespace PascalCompiler
                 StructuredType();
             else if (IsStartPointerType(CurrentSymbol))
                 PointerType();
-
-            // Add error
         }
 
         private bool IsStartSimpleType(SymbolEnum symbol)
         {
-            return IsStartScalarType(symbol) || IsStartSubrangeType(symbol) || IsStartEnumerableType(symbol);
+            return IsStartSubrangeType(symbol) || IsStartEnumerableType(symbol);
         }
 
-        private bool IsStartScalarType(SymbolEnum symbol)
+        private bool IsStartEnumerableType(SymbolEnum symbol)
         {
-            SymbolEnum[] allowedSymbols = { SymbolEnum.BooleanSy, SymbolEnum.CharSy, SymbolEnum.IntegerSy, SymbolEnum.RealSy, SymbolEnum.StringSy };
+            SymbolEnum[] allowedSymbols = { SymbolEnum.LeftRoundBracket };
             return allowedSymbols.Contains(symbol);
         }
 
@@ -135,22 +125,19 @@ namespace PascalCompiler
             return allowedSymbols.Contains(symbol);
         }
 
-        private bool IsStartEnumerableType(SymbolEnum symbol)
-        {
-            SymbolEnum[] allowedSymbols = { SymbolEnum.LeftRoundBracket };
-            return allowedSymbols.Contains(symbol);
-        }
-
         private void SimpleType()
         {
-            if (IsStartScalarType(CurrentSymbol))
-                NextSymbol();
+            if (IsStartEnumerableType(CurrentSymbol))
+                EnumerableType();
             else if (IsStartSubrangeType(CurrentSymbol))
                 SubrangeType(CurrentSymbol);
-            else if (IsStartEnumerableType(CurrentSymbol))
-                EnumerableType();
+            else if (CurrentSymbol == SymbolEnum.Identifier)
+                NextSymbol();
+        }
 
-            // Add error
+        private void EnumerableType()
+        {
+            // TODO
         }
 
         private void SubrangeType(SymbolEnum symbol)
@@ -158,11 +145,6 @@ namespace PascalCompiler
             Accept(symbol);
             Accept(SymbolEnum.TwoDots);
             Accept(symbol);
-        }
-
-        private void EnumerableType()
-        {
-            // TODO
         }
 
         private bool IsStartStructuredType(SymbolEnum symbol)
@@ -181,42 +163,21 @@ namespace PascalCompiler
                 SetType();
             else if (CurrentSymbol == SymbolEnum.FileSy)
                 FileType();
-
-            // Add error
         }
 
         private void ArrayType()
         {
             Accept(SymbolEnum.ArraySy);
             Accept(SymbolEnum.LeftSquareBracket);
-            IndexType();
-            while (lexicalAnalyzer.CurrentSymbol == SymbolEnum.Comma)
+            SimpleType();
+            while (CurrentSymbol == SymbolEnum.Comma)
             {
                 Accept(SymbolEnum.Comma);
-                IndexType();
+                SimpleType();
             }
             Accept(SymbolEnum.RightSquareBracket);
             Accept(SymbolEnum.OfSy);
             Type();
-        }
-
-        private void IndexType()
-        {
-            switch (lexicalAnalyzer.CurrentSymbol)
-            {
-                case SymbolEnum.BooleanSy:
-                case SymbolEnum.ByteSy:
-                case SymbolEnum.CharSy:
-                case SymbolEnum.IntegerSy:
-                    NextSymbol();
-                    break;
-                case SymbolEnum.IntConstant:
-                case SymbolEnum.CharConstant:
-                    SubrangeType(lexicalAnalyzer.CurrentSymbol);
-                    break;
-            }
-
-            // Add error
         }
 
         private void RecordType()
@@ -247,24 +208,24 @@ namespace PascalCompiler
 
         private void VarDeclarationPart()
         {
-            if (lexicalAnalyzer.CurrentSymbol == SymbolEnum.VarSy)
+            if (CurrentSymbol == SymbolEnum.VarSy)
             {
-                Accept(SymbolEnum.VarSy);
+                NextSymbol();
                 do
                 {
                     VarDeclaration();
                     Accept(SymbolEnum.Semicolon);
                 }
-                while (lexicalAnalyzer.CurrentSymbol == SymbolEnum.Identifier);
+                while (CurrentSymbol == SymbolEnum.Identifier);
             }
         }
 
         private void VarDeclaration()
         {
             Accept(SymbolEnum.Identifier);
-            while (lexicalAnalyzer.CurrentSymbol == SymbolEnum.Comma)
+            while (CurrentSymbol == SymbolEnum.Comma)
             {
-                Accept(SymbolEnum.Comma);
+                NextSymbol();
                 Accept(SymbolEnum.Identifier);
             }
             Accept(SymbolEnum.Colon);
@@ -273,7 +234,7 @@ namespace PascalCompiler
 
         private void ProcAndFuncDeclarationPart()
         {
-
+            // TODO
         }
 
         private void StatementPart()
@@ -285,9 +246,9 @@ namespace PascalCompiler
         {
             Accept(SymbolEnum.BeginSy);
             Statement();
-            while (lexicalAnalyzer.CurrentSymbol == SymbolEnum.Semicolon)
+            while (CurrentSymbol == SymbolEnum.Semicolon)
             {
-                Accept(SymbolEnum.Semicolon);
+                NextSymbol();
                 Statement();
             }
             Accept(SymbolEnum.EndSy);
@@ -306,6 +267,13 @@ namespace PascalCompiler
             AssignmentStatement();
         }
 
+        private void AssignmentStatement()
+        {
+            Accept(SymbolEnum.Identifier);
+            Accept(SymbolEnum.Assign);
+            Expression();
+        }
+
         private bool IsStartStructuredStatement(SymbolEnum symbol)
         {
             return CurrentSymbol == SymbolEnum.BeginSy || CurrentSymbol == SymbolEnum.IfSy || IsStartRepetitiveStatement(symbol) || CurrentSymbol == SymbolEnum.WithSy;
@@ -315,7 +283,7 @@ namespace PascalCompiler
         {
             if (CurrentSymbol == SymbolEnum.BeginSy)
                 CompoundStatement();
-            else if (CurrentSymbol == SymbolEnum.IfSy)
+            else if (CurrentSymbol == SymbolEnum.IfSy || CurrentSymbol == SymbolEnum.CaseSy)
                 ConditionalStatement();
             else if (IsStartRepetitiveStatement(CurrentSymbol))
                 RepetitiveStatement();
@@ -323,107 +291,34 @@ namespace PascalCompiler
                 WithStatement();
         }
 
-        private void AssignmentStatement()
-        {
-            Accept(SymbolEnum.Identifier);
-            Accept(SymbolEnum.Assign);
-            Expression();
-        }
-
-        private void ProcedureStatement()
-        {
-            Accept(SymbolEnum.Identifier);
-            if (CurrentSymbol == SymbolEnum.LeftRoundBracket)
-            {
-                Accept(SymbolEnum.LeftRoundBracket);
-                Accept(SymbolEnum.Identifier);
-                Accept(SymbolEnum.RightRoundBracket);
-            }
-        }
-
-        private void Expression()
-        {
-            SimpleExpression();
-
-            var currentSymbol = lexicalAnalyzer.CurrentSymbol;
-            if (currentSymbol == SymbolEnum.Equals ||
-                currentSymbol == SymbolEnum.NotEquals ||
-                currentSymbol == SymbolEnum.Less ||
-                currentSymbol == SymbolEnum.LessEquals ||
-                currentSymbol == SymbolEnum.GreaterEquals ||
-                currentSymbol == SymbolEnum.Greater ||
-                currentSymbol == SymbolEnum.InSy)
-            {
-                RelationalOperator();
-                SimpleExpression();
-            }
-        }
-
-        private void SimpleExpression()
-        {
-            Term();
-
-            var currentSymbol = lexicalAnalyzer.CurrentSymbol;
-            if (currentSymbol == SymbolEnum.Plus ||
-                currentSymbol == SymbolEnum.Minus ||
-                currentSymbol == SymbolEnum.OrSy)
-            {
-                AddingOperator();
-                Term();
-            }
-        }
-
-        private void Term()
-        {
-            Factor();
-
-            var currentSymbol = lexicalAnalyzer.CurrentSymbol;
-            if (currentSymbol == SymbolEnum.Star ||
-                currentSymbol == SymbolEnum.Slash ||
-                currentSymbol == SymbolEnum.DivSy ||
-                currentSymbol == SymbolEnum.ModSy ||
-                currentSymbol == SymbolEnum.AndSy)
-            {
-                MultiplyingOperator();
-                Factor();
-            }
-        }
-
-        private void Factor()
-        {
-            if (CurrentSymbol == SymbolEnum.NotSy)
-            {
-                Accept(SymbolEnum.NotSy);
-            }
-
-            Expression();
-        }
-
-        private void RelationalOperator()
-        {
-            Accept(lexicalAnalyzer.CurrentSymbol);
-        }
-
-        private void MultiplyingOperator()
-        {
-            Accept(lexicalAnalyzer.CurrentSymbol);
-        }
-
-        private void AddingOperator()
-        {
-            Accept(lexicalAnalyzer.CurrentSymbol);
-        }
-
         private void ConditionalStatement()
         {
-            if (lexicalAnalyzer.CurrentSymbol == SymbolEnum.IfSy)
+            if (CurrentSymbol == SymbolEnum.IfSy)
             {
                 IfStatement();
             }
-            else if (lexicalAnalyzer.CurrentSymbol == SymbolEnum.CaseSy)
+            else if (CurrentSymbol == SymbolEnum.CaseSy)
             {
                 CaseStatement();
             }
+        }
+
+        private void IfStatement()
+        {
+            Accept(SymbolEnum.IfSy);
+            Expression();
+            Accept(SymbolEnum.ThenSy);
+            Statement();
+            if (CurrentSymbol == SymbolEnum.ElseSy)
+            {
+                Accept(SymbolEnum.ElseSy);
+                Statement();
+            }
+        }
+
+        private void CaseStatement()
+        {
+            // TODO
         }
 
         private bool IsStartRepetitiveStatement(SymbolEnum symbol)
@@ -434,7 +329,7 @@ namespace PascalCompiler
 
         private void RepetitiveStatement()
         {
-            switch (lexicalAnalyzer.CurrentSymbol)
+            switch (CurrentSymbol)
             {
                 case SymbolEnum.WhileSy:
                     WhileStatement();
@@ -446,29 +341,6 @@ namespace PascalCompiler
                     ForStatement();
                     break;
             }
-        }
-
-        private void WithStatement()
-        {
-            // TODO
-        }
-
-        private void IfStatement()
-        {
-            Accept(SymbolEnum.IfSy);
-            Expression();
-            Accept(SymbolEnum.ThenSy);
-            Statement();
-            if (lexicalAnalyzer.CurrentSymbol == SymbolEnum.ElseSy)
-            {
-                Accept(SymbolEnum.ElseSy);
-                Statement();
-            }
-        }
-
-        private void CaseStatement()
-        {
-            // TODO
         }
 
         private void WhileStatement()
@@ -483,6 +355,11 @@ namespace PascalCompiler
         {
             Accept(SymbolEnum.RepeatSy);
             Statement();
+            while (CurrentSymbol == SymbolEnum.Semicolon)
+            {
+                NextSymbol();
+                Statement();
+            }
             Accept(SymbolEnum.UntilSy);
             Expression();
         }
@@ -490,14 +367,14 @@ namespace PascalCompiler
         private void ForStatement()
         {
             Accept(SymbolEnum.ForSy);
-            ControlVariable();
+            ForStatementParameter();
             Accept(SymbolEnum.Assign);
             ForList();
             Accept(SymbolEnum.DoSy);
             Statement();
         }
 
-        private void ControlVariable()
+        private void ForStatementParameter()
         {
             Accept(SymbolEnum.Identifier);
         }
@@ -505,18 +382,120 @@ namespace PascalCompiler
         private void ForList()
         {
             Expression();
-
-            switch (lexicalAnalyzer.CurrentSymbol)
+            if (CurrentSymbol == SymbolEnum.ToSy || CurrentSymbol == SymbolEnum.DowntoSy)
             {
-                case SymbolEnum.ToSy:
-                    Accept(SymbolEnum.ToSy);
-                    break;
-                case SymbolEnum.DowntoSy:
-                    Accept(SymbolEnum.DowntoSy);
-                    break;
+                NextSymbol();
+            }
+            Expression();
+        }
+
+        private void WithStatement()
+        {
+            // TODO
+        }
+
+        private void Expression()
+        {
+            SimpleExpression();
+
+            if (CurrentSymbol == SymbolEnum.Equals ||
+                CurrentSymbol == SymbolEnum.NotEquals ||
+                CurrentSymbol == SymbolEnum.Less ||
+                CurrentSymbol == SymbolEnum.LessEquals ||
+                CurrentSymbol == SymbolEnum.GreaterEquals ||
+                CurrentSymbol == SymbolEnum.Greater ||
+                CurrentSymbol == SymbolEnum.InSy)
+            {
+                NextSymbol();
+                SimpleExpression();
+            }
+        }
+
+        private void SimpleExpression()
+        {
+            if (CurrentSymbol == SymbolEnum.Minus || CurrentSymbol == SymbolEnum.Plus)
+            {
+                NextSymbol();
             }
 
-            Expression();
+            Term();
+            if (CurrentSymbol == SymbolEnum.Plus ||
+                CurrentSymbol == SymbolEnum.Minus ||
+                CurrentSymbol == SymbolEnum.OrSy)
+            {
+                NextSymbol();
+                Term();
+            }
+        }
+
+        // Слагаемое
+        private void Term()
+        {
+            Factor();
+
+            if (CurrentSymbol == SymbolEnum.Star ||
+                CurrentSymbol == SymbolEnum.Slash ||
+                CurrentSymbol == SymbolEnum.DivSy ||
+                CurrentSymbol == SymbolEnum.ModSy ||
+                CurrentSymbol == SymbolEnum.AndSy)
+            {
+                NextSymbol();
+                Factor();
+            }
+        }
+
+        // Множитель
+        private void Factor()
+        {
+            if (CurrentSymbol == SymbolEnum.NotSy)
+            {
+                NextSymbol();
+                Factor();
+            }
+            else
+            {
+                if (IsStartVariable(CurrentSymbol))
+                {
+                    Variable();
+                }
+                else if (IsStartUnsignedConstant(CurrentSymbol))
+                {
+                    NextSymbol();
+                }
+                else if (CurrentSymbol == SymbolEnum.LeftRoundBracket)
+                {
+                    Accept(SymbolEnum.LeftRoundBracket);
+                    Expression();
+                    Accept(SymbolEnum.RightRoundBracket);
+                }
+            }
+        }
+
+        private bool IsStartVariable(SymbolEnum symbol)
+        {
+            return IsStartEntireVariable(symbol);
+        }
+
+        private void Variable()
+        {
+            EntireVariable();
+        }
+
+        private bool IsStartEntireVariable(SymbolEnum symbol)
+        {
+            SymbolEnum[] allowedSymbols = { SymbolEnum.Identifier };
+            return allowedSymbols.Contains(symbol);
+        }
+
+        private void EntireVariable()
+        {
+            Accept(SymbolEnum.Identifier);
+        }
+
+        private bool IsStartUnsignedConstant(SymbolEnum symbol)
+        {
+            SymbolEnum[] allowedSymbols = { SymbolEnum.IntConstant, SymbolEnum.RealConstant, SymbolEnum.CharConstant, SymbolEnum.Identifier, SymbolEnum.NilSy };
+            return allowedSymbols.Contains(symbol);
         }
     }
 }

@@ -56,11 +56,6 @@ namespace PascalCompiler
             return error;
         }
 
-        public Error AddError(int row, int position, SymbolEnum expectedSymbol)
-        {
-            throw new NotImplementedException();
-        }
-
         private void ReadNextLine()
         {
             buffer = inputFile.ReadLine();
@@ -94,6 +89,9 @@ namespace PascalCompiler
 
         public void Dispose()
         {
+            listing.WriteLine();
+            listing.WriteLine("Компиляция окончена. Количество ошибок: " + errorCount);
+
             inputFile.Close();
             listing.Close();
         }
