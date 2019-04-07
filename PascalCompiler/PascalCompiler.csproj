@@ -51,6 +51,8 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Symbol.cs" />
+    <Compile Include="SyntaticAnalyzer\Followers.cs" />
+    <Compile Include="SyntaticAnalyzer\Starters.cs" />
     <Compile Include="SyntaticAnalyzer\SyntacticAnalyzer.cs" />
   </ItemGroup>
   <ItemGroup>

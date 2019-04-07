@@ -134,7 +134,7 @@ namespace PascalCompiler
                         CurrentSymbol = SymbolEnum.Star;
                         currentCharacter = ioModule.NextCh();
                         break;
-                    case '\\':
+                    case '/':
                         CurrentSymbol = SymbolEnum.Slash;
                         currentCharacter = ioModule.NextCh();
                         break;

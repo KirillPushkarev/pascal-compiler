@@ -103,6 +103,7 @@ namespace PascalCompiler
             { "of", SymbolEnum.OfSy },
             { "procedure", SymbolEnum.ProcedureSy },
             { "program", SymbolEnum.ProgramSy },
+            { "to", SymbolEnum.ToSy },
             { "type", SymbolEnum.TypeSy },
             { "var", SymbolEnum.VarSy },
             { "while", SymbolEnum.WhileSy }

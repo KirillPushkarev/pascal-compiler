@@ -60,7 +60,10 @@ namespace PascalCompiler
         {
             buffer = inputFile.ReadLine();
             if (buffer != null)
+            {
+                buffer = buffer.Replace("\t", "    ");
                 buffer += "\n";
+            }
         }
 
         private void WriteNextLineToListing()
@@ -90,7 +93,7 @@ namespace PascalCompiler
         public void Dispose()
         {
             listing.WriteLine();
-            listing.WriteLine("Компиляция окончена. Количество ошибок: " + errorCount);
+            listing.WriteLine("Компиляция окончена. Количество ошибок: " + errorCount + ".");
 
             inputFile.Close();
             listing.Close();

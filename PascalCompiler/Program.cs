@@ -9,7 +9,7 @@ namespace PascalCompiler
     {
         static void Main(string[] args)
         {
-            TestLexicalAnalyzer();
+            TestSyntacticAnalyzer();
         }
 
         static void TestIOModule()
@@ -72,10 +72,11 @@ namespace PascalCompiler
             var errorDigest = ReadErrorDigest();
             var errorTable = new ErrorTable(errorDigest);
 
-            var ioModule = new IOModule(errorTable, @".\2.pas", @".\listing.txt");
+            var ioModule = new IOModule(errorTable, @"..\..\data\test_synt_1.pas", @"..\..\data\listing.txt");
             var lexicalAnalyzer = new LexicalAnalyzer(ioModule);
             var syntacticAnalyzer = new SyntacticAnalyzer(ioModule, lexicalAnalyzer);
             syntacticAnalyzer.Run();
+            ioModule.Dispose();
         }
 
         static Dictionary<int, string> ReadErrorDigest()
@@ -86,7 +87,7 @@ namespace PascalCompiler
             errorDigestFile.ReadLine();
             while ((line = errorDigestFile.ReadLine()) != null)
             {
-                var lineParts = line.Split(':');
+                var lineParts = line.Split('|');
                 int errorCode = int.Parse(lineParts[0]);
                 string errorMessage = lineParts[1];
                 errorDigest.Add(errorCode, errorMessage);

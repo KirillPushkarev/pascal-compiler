@@ -1,4 +1,6 @@
-﻿using System;
+﻿using PascalCompiler.SyntaticAnalyzer;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using static PascalCompiler.Symbol;
 
@@ -8,6 +10,8 @@ namespace PascalCompiler
     {
         private IOModule ioModule;
         private LexicalAnalyzer lexicalAnalyzer;
+
+        private const int FORBIDDEN_SYMBOL_ERROR_CODE = 6;
 
         private SymbolEnum CurrentSymbol
         {
@@ -24,14 +28,12 @@ namespace PascalCompiler
         {
             if (lexicalAnalyzer.CurrentSymbol != expectedSymbol)
             {
-                ioModule.AddError(
-                    symbolToErrorCodeMapping[expectedSymbol],
-                    lexicalAnalyzer.CurrentLineNumber, 
-                    lexicalAnalyzer.CurrentPositionInLine
-                    );
+                Error(symbolToErrorCodeMapping[expectedSymbol]);
             }
-
-            NextSymbol();
+            else
+            {
+                NextSymbol();
+            }
         }
 
         private void NextSymbol()
@@ -43,17 +45,71 @@ namespace PascalCompiler
             while (lexicalAnalyzer.Error != null && !lexicalAnalyzer.IsFinished);
         }
 
+        private void Error(int errorCode)
+        {
+            ioModule.AddError(
+                errorCode,
+                lexicalAnalyzer.CurrentLineNumber,
+                lexicalAnalyzer.CurrentPositionInLine
+                );
+        }
+
+        private void NeutralizerDecorator(
+            Action<HashSet<SymbolEnum>> method, 
+            HashSet<SymbolEnum> starters,
+            HashSet<SymbolEnum> followers,
+            int errorCode,
+            HashSet<SymbolEnum> parentFollowers = null
+            )
+        {
+            if (parentFollowers != null)
+            {
+                followers = new HashSet<SymbolEnum>(followers.Concat(parentFollowers));
+            }
+
+            if (!starters.Contains(CurrentSymbol))
+            {
+                Error(errorCode);
+                SkipToBefore(starters, followers);
+            }
+            if (starters.Contains(CurrentSymbol))
+            {
+                method(followers);
+                if (!followers.Contains(CurrentSymbol))
+                {
+                    Error(FORBIDDEN_SYMBOL_ERROR_CODE);
+                    SkipToAfter(followers);
+                }
+            }
+        }
+
         public void Run()
         {
             NextSymbol();
             Program();
         }
 
+        private void SkipToBefore(HashSet<SymbolEnum> starters, HashSet<SymbolEnum> followers)
+        {
+            while (!starters.Contains(CurrentSymbol) && !followers.Contains(CurrentSymbol) && !lexicalAnalyzer.IsFinished)
+            {
+                NextSymbol();
+            }
+        }
+
+        private void SkipToAfter(HashSet<SymbolEnum> followers)
+        {
+            while (!followers.Contains(CurrentSymbol) && !lexicalAnalyzer.IsFinished)
+            {
+                NextSymbol();
+            }
+        }
+
         private void Program()
         {
             ProgramHeading();
             Accept(SymbolEnum.Semicolon);
-            Block();
+            NeutralizerDecorator(Block, Starters.Block, Followers.Block, 18);
             Accept(SymbolEnum.Dot);
         }
 
@@ -63,12 +119,12 @@ namespace PascalCompiler
             Accept(SymbolEnum.Identifier);
         }
 
-        private void Block()
+        private void Block(HashSet<SymbolEnum> followers)
         {
             LabelDeclarationPart();
             ConstantDefinitionPart();
             TypeDefinitionPart();
-            VarDeclarationPart();
+            NeutralizerDecorator(VarDeclarationPart, Starters.VarDeclarationPart, Followers.VarDeclarationPart, 18, followers);
             ProcAndFuncDeclarationPart();
             StatementPart();
         }
@@ -98,7 +154,7 @@ namespace PascalCompiler
             }
         }
 
-        private void Type()
+        private void Type(HashSet<SymbolEnum> followers = null)
         {
             if (IsStartSimpleType(CurrentSymbol))
                 SimpleType();
@@ -110,12 +166,12 @@ namespace PascalCompiler
 
         private bool IsStartSimpleType(SymbolEnum symbol)
         {
-            return IsStartSubrangeType(symbol) || IsStartEnumerableType(symbol);
+            return IsStartSubrangeType(symbol) || IsStartEnumerableType(symbol) || symbol == SymbolEnum.Identifier;
         }
 
         private bool IsStartEnumerableType(SymbolEnum symbol)
         {
-            SymbolEnum[] allowedSymbols = { SymbolEnum.LeftRoundBracket };
+            SymbolEnum[] allowedSymbols = { };
             return allowedSymbols.Contains(symbol);
         }
 
@@ -206,21 +262,21 @@ namespace PascalCompiler
             // TODO
         }
 
-        private void VarDeclarationPart()
+        private void VarDeclarationPart(HashSet<SymbolEnum> followers)
         {
             if (CurrentSymbol == SymbolEnum.VarSy)
             {
                 NextSymbol();
                 do
                 {
-                    VarDeclaration();
+                    NeutralizerDecorator(VarDeclaration, Starters.VarDeclaration, Followers.VarDeclaration, 2, followers);
                     Accept(SymbolEnum.Semicolon);
                 }
                 while (CurrentSymbol == SymbolEnum.Identifier);
             }
         }
 
-        private void VarDeclaration()
+        private void VarDeclaration(HashSet<SymbolEnum> followers)
         {
             Accept(SymbolEnum.Identifier);
             while (CurrentSymbol == SymbolEnum.Comma)
@@ -229,7 +285,7 @@ namespace PascalCompiler
                 Accept(SymbolEnum.Identifier);
             }
             Accept(SymbolEnum.Colon);
-            Type();
+            NeutralizerDecorator(Type, Starters.Type, Followers.Type, 10, followers);
         }
 
         private void ProcAndFuncDeclarationPart()
@@ -258,8 +314,13 @@ namespace PascalCompiler
         {
             if (IsStartStructuredStatement(CurrentSymbol))
                 StructuredStatement();
-            else 
+            else if (IsStartSimpleStatement(CurrentSymbol))
                 SimpleStatement();
+        }
+
+        private bool IsStartSimpleStatement(SymbolEnum symbol)
+        {
+            return CurrentSymbol == SymbolEnum.Identifier;
         }
 
         private void SimpleStatement()
