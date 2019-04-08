@@ -126,7 +126,7 @@ namespace PascalCompiler
             TypeDefinitionPart();
             NeutralizerDecorator(VarDeclarationPart, Starters.VarDeclarationPart, Followers.VarDeclarationPart, 18, followers);
             ProcAndFuncDeclarationPart();
-            StatementPart();
+            NeutralizerDecorator(StatementPart, Starters.StatementPart, Followers.StatementPart, 6, followers);
         }
 
         private void LabelDeclarationPart()
@@ -293,29 +293,33 @@ namespace PascalCompiler
             // TODO
         }
 
-        private void StatementPart()
+        private void StatementPart(HashSet<SymbolEnum> followers)
         {
-            CompoundStatement();
+            NeutralizerDecorator(CompoundStatement, Starters.CompoundStatement, Followers.CompoundStatement, 6, followers);
         }
 
-        private void CompoundStatement()
+        private void CompoundStatement(HashSet<SymbolEnum> followers = null)
         {
             Accept(SymbolEnum.BeginSy);
-            Statement();
+            NeutralizerDecorator(Statement, Starters.Statement, Followers.Statement, 6, followers);
             while (CurrentSymbol == SymbolEnum.Semicolon)
             {
                 NextSymbol();
-                Statement();
+                NeutralizerDecorator(Statement, Starters.Statement, Followers.Statement, 6, followers);
             }
             Accept(SymbolEnum.EndSy);
         }
 
-        private void Statement()
+        private void Statement(HashSet<SymbolEnum> followers = null)
         {
             if (IsStartStructuredStatement(CurrentSymbol))
+            {
                 StructuredStatement();
+            }
             else if (IsStartSimpleStatement(CurrentSymbol))
-                SimpleStatement();
+            {
+                NeutralizerDecorator(SimpleStatement, Starters.SimpleStatement, Followers.SimpleStatement, 6, followers);
+            }
         }
 
         private bool IsStartSimpleStatement(SymbolEnum symbol)
@@ -323,16 +327,16 @@ namespace PascalCompiler
             return CurrentSymbol == SymbolEnum.Identifier;
         }
 
-        private void SimpleStatement()
+        private void SimpleStatement(HashSet<SymbolEnum> followers = null)
         {
-            AssignmentStatement();
+            NeutralizerDecorator(AssignmentStatement, Starters.AssignmentStatement, Followers.AssignmentStatement, 6, followers);
         }
 
-        private void AssignmentStatement()
+        private void AssignmentStatement(HashSet<SymbolEnum> followers = null)
         {
             Accept(SymbolEnum.Identifier);
             Accept(SymbolEnum.Assign);
-            Expression();
+            NeutralizerDecorator(Expression, Starters.Expression, Followers.Expression, 6, followers);
         }
 
         private bool IsStartStructuredStatement(SymbolEnum symbol)
@@ -455,9 +459,9 @@ namespace PascalCompiler
             // TODO
         }
 
-        private void Expression()
+        private void Expression(HashSet<SymbolEnum> followers = null)
         {
-            SimpleExpression();
+            NeutralizerDecorator(SimpleExpression, Starters.SimpleExpression, Followers.SimpleExpression, 6, followers);
 
             if (CurrentSymbol == SymbolEnum.Equals ||
                 CurrentSymbol == SymbolEnum.NotEquals ||
@@ -468,45 +472,45 @@ namespace PascalCompiler
                 CurrentSymbol == SymbolEnum.InSy)
             {
                 NextSymbol();
-                SimpleExpression();
+                NeutralizerDecorator(SimpleExpression, Starters.SimpleExpression, Followers.SimpleExpression, 6, followers);
             }
         }
 
-        private void SimpleExpression()
+        private void SimpleExpression(HashSet<SymbolEnum> followers = null)
         {
             if (CurrentSymbol == SymbolEnum.Minus || CurrentSymbol == SymbolEnum.Plus)
             {
                 NextSymbol();
             }
 
-            Term();
-            if (CurrentSymbol == SymbolEnum.Plus ||
+            NeutralizerDecorator(Term, Starters.Term, Followers.Term, 6, followers);
+            while (CurrentSymbol == SymbolEnum.Plus ||
                 CurrentSymbol == SymbolEnum.Minus ||
                 CurrentSymbol == SymbolEnum.OrSy)
             {
                 NextSymbol();
-                Term();
+                NeutralizerDecorator(Term, Starters.Term, Followers.Term, 6, followers);
             }
         }
 
         // Слагаемое
-        private void Term()
+        private void Term(HashSet<SymbolEnum> followers = null)
         {
-            Factor();
+            NeutralizerDecorator(Factor, Starters.Factor, Followers.Factor, 6, followers);
 
-            if (CurrentSymbol == SymbolEnum.Star ||
+            while (CurrentSymbol == SymbolEnum.Star ||
                 CurrentSymbol == SymbolEnum.Slash ||
                 CurrentSymbol == SymbolEnum.DivSy ||
                 CurrentSymbol == SymbolEnum.ModSy ||
                 CurrentSymbol == SymbolEnum.AndSy)
             {
                 NextSymbol();
-                Factor();
+                NeutralizerDecorator(Factor, Starters.Factor, Followers.Factor, 6, followers);
             }
         }
 
         // Множитель
-        private void Factor()
+        private void Factor(HashSet<SymbolEnum> followers = null)
         {
             if (CurrentSymbol == SymbolEnum.NotSy)
             {
@@ -526,7 +530,7 @@ namespace PascalCompiler
                 else if (CurrentSymbol == SymbolEnum.LeftRoundBracket)
                 {
                     Accept(SymbolEnum.LeftRoundBracket);
-                    Expression();
+                    NeutralizerDecorator(Expression, Starters.Expression, Followers.Expression, 6, followers);
                     Accept(SymbolEnum.RightRoundBracket);
                 }
             }

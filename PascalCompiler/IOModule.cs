@@ -78,7 +78,7 @@ namespace PascalCompiler
             foreach (var error in errorTable.Errors[CurrentRow])
             {
                 listing.WriteLine(FormatErrorNumber(error));
-                listing.WriteLine(("******* ") + error.Message);
+                listing.WriteLine(("******* ") + string.Format("{0," + (error.Position + 1) + "}", "") + error.Message);
             }
         }
 
