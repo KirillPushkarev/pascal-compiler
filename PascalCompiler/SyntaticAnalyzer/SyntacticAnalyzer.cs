@@ -13,7 +13,8 @@ namespace PascalCompiler
 
         private const int FORBIDDEN_SYMBOL_ERROR_CODE = 6;
 
-        private SymbolEnum CurrentSymbol => lexicalAnalyzer.CurrentSymbol;
+        private SymbolEnum CurrentSymbol { get; set; }
+        private Queue<SymbolEnum> symbolQueue = new Queue<SymbolEnum>();
 
         public SyntacticAnalyzer(IOModule ioModule, LexicalAnalyzer lexicalAnalyzer)
         {
@@ -35,11 +36,18 @@ namespace PascalCompiler
 
         private void NextSymbol()
         {
+            if (symbolQueue.Count > 0)
+            {
+                CurrentSymbol = symbolQueue.Dequeue();
+                return;
+            }
+
             do
             {
                 lexicalAnalyzer.NextSymbol();
             }
             while (lexicalAnalyzer.Error != null && !lexicalAnalyzer.IsFinished);
+            CurrentSymbol = lexicalAnalyzer.CurrentSymbol;
         }
 
         private void Error(int errorCode)
@@ -99,18 +107,18 @@ namespace PascalCompiler
         public void Run()
         {
             NextSymbol();
-            Program();
+            NeutralizerDecorator(Program, Starters.Program, Followers.Program);
         }
 
-        private void Program()
+        private void Program(HashSet<SymbolEnum> followers)
         {
-            ProgramHeading();
+            NeutralizerDecorator(ProgramHeading, Starters.ProgramHeading, Followers.ProgramHeading, 6, followers);
             Accept(SymbolEnum.Semicolon);
-            NeutralizerDecorator(Block, Starters.Block, Followers.Block, 18);
+            NeutralizerDecorator(Block, Starters.Block, Followers.Block, 18, followers);
             Accept(SymbolEnum.Dot);
         }
 
-        private void ProgramHeading()
+        private void ProgramHeading(HashSet<SymbolEnum> followers)
         {
             Accept(SymbolEnum.ProgramSy);
             Accept(SymbolEnum.Identifier);
@@ -118,25 +126,22 @@ namespace PascalCompiler
 
         private void Block(HashSet<SymbolEnum> followers)
         {
-            LabelDeclarationPart();
-            ConstantDefinitionPart();
-            TypeDefinitionPart();
+            NeutralizerDecorator(TypeDefinitionPart, Starters.TypeDefinitionPart, Followers.TypeDefinitionPart, 6, followers);
             NeutralizerDecorator(VarDeclarationPart, Starters.VarDeclarationPart, Followers.VarDeclarationPart, 18, followers);
-            ProcAndFuncDeclarationPart();
             NeutralizerDecorator(StatementPart, Starters.StatementPart, Followers.StatementPart, 6, followers);
         }
 
-        private void LabelDeclarationPart()
-        {
-            // TODO
-        }
+        //private void LabelDeclarationPart()
+        //{
+        //    // TODO
+        //}
 
-        private void ConstantDefinitionPart()
-        {
-            // TODO
-        }
+        //private void ConstantDefinitionPart()
+        //{
+        //    // TODO
+        //}
 
-        private void TypeDefinitionPart()
+        private void TypeDefinitionPart(HashSet<SymbolEnum> followers)
         {
             if (CurrentSymbol == SymbolEnum.TypeSy)
             {
@@ -145,119 +150,145 @@ namespace PascalCompiler
                 {
                     Accept(SymbolEnum.Identifier);
                     Accept(SymbolEnum.Equals);
-                    Type();
+                    NeutralizerDecorator(Type, Starters.Type, Followers.Type, 10, followers);
                     Accept(SymbolEnum.Semicolon);
                 }
             }
         }
 
-        private void Type(HashSet<SymbolEnum> followers = null)
+        private void Type(HashSet<SymbolEnum> followers)
         {
             if (IsStartSimpleType(CurrentSymbol))
-                SimpleType();
+                SimpleType(followers);
             else if (IsStartStructuredType(CurrentSymbol))
                 StructuredType(followers);
-            else if (IsStartPointerType(CurrentSymbol))
-                PointerType();
+            //else if (IsStartPointerType(CurrentSymbol))
+            //    PointerType();
         }
 
         private bool IsStartSimpleType(SymbolEnum symbol)
         {
-            return IsStartSubrangeType(symbol) || IsStartEnumerableType(symbol) || symbol == SymbolEnum.Identifier;
+            return IsStartSubrangeType(symbol) || symbol == SymbolEnum.Identifier;
         }
 
-        private bool IsStartEnumerableType(SymbolEnum symbol)
-        {
-            SymbolEnum[] allowedSymbols = { };
-            return allowedSymbols.Contains(symbol);
-        }
+        //private bool IsStartEnumerableType(SymbolEnum symbol)
+        //{
+        //    SymbolEnum[] allowedSymbols = { };
+        //    return allowedSymbols.Contains(symbol);
+        //}
 
         private bool IsStartSubrangeType(SymbolEnum symbol)
         {
-            SymbolEnum[] allowedSymbols = { SymbolEnum.IntConstant, SymbolEnum.CharConstant };
+            SymbolEnum[] allowedSymbols = { SymbolEnum.Minus, SymbolEnum.Plus, SymbolEnum.IntConstant, SymbolEnum.RealConstant, SymbolEnum.Identifier, SymbolEnum.CharConstant };
             return allowedSymbols.Contains(symbol);
         }
 
-        private void SimpleType()
+        private void SimpleType(HashSet<SymbolEnum> followers)
         {
-            if (IsStartEnumerableType(CurrentSymbol))
-                EnumerableType();
-            else if (IsStartSubrangeType(CurrentSymbol))
-                SubrangeType(CurrentSymbol);
+            if (IsStartSubrangeType(CurrentSymbol) && CurrentSymbol != SymbolEnum.Identifier)
+                NeutralizerDecorator(SubrangeType, Starters.SubrangeType, Followers.SubrangeType, FORBIDDEN_SYMBOL_ERROR_CODE, followers);
             else if (CurrentSymbol == SymbolEnum.Identifier)
+            {
                 NextSymbol();
+                if (CurrentSymbol == SymbolEnum.TwoDots)
+                {
+                    CurrentSymbol = SymbolEnum.Identifier;
+                    symbolQueue.Enqueue(SymbolEnum.TwoDots);
+                    NeutralizerDecorator(SubrangeType, Starters.SubrangeType, Followers.SubrangeType, FORBIDDEN_SYMBOL_ERROR_CODE, followers);
+                }
+            }
         }
 
-        private void EnumerableType()
-        {
-            // TODO
-        }
+        //private void EnumerableType()
+        //{
+        //    // TODO
+        //}
 
-        private void SubrangeType(SymbolEnum symbol)
+        private void SubrangeType(HashSet<SymbolEnum> followers)
         {
-            Accept(symbol);
+            Constant();
             Accept(SymbolEnum.TwoDots);
-            Accept(symbol);
+            Constant();
+        }
+
+        private void Constant()
+        {
+            switch (CurrentSymbol)
+            {
+                case SymbolEnum.Minus:
+                case SymbolEnum.Plus:
+                    if (CurrentSymbol == SymbolEnum.IntConstant || CurrentSymbol == SymbolEnum.RealConstant || CurrentSymbol == SymbolEnum.Identifier)
+                        NextSymbol();
+                    break;
+                case SymbolEnum.IntConstant:
+                case SymbolEnum.RealConstant:
+                case SymbolEnum.Identifier:
+                    NextSymbol();
+                    break;
+                case SymbolEnum.CharConstant:
+                    NextSymbol();
+                    break;
+            }
         }
 
         private bool IsStartStructuredType(SymbolEnum symbol)
         {
-            SymbolEnum[] allowedSymbols = { SymbolEnum.ArraySy, SymbolEnum.RecordSy, SymbolEnum.SetSy, SymbolEnum.FileSy };
+            SymbolEnum[] allowedSymbols = { SymbolEnum.ArraySy };
             return allowedSymbols.Contains(symbol);
         }
 
-        private void StructuredType(HashSet<SymbolEnum> followers = null)
+        private void StructuredType(HashSet<SymbolEnum> followers)
         {
             if (CurrentSymbol == SymbolEnum.ArraySy)
                 NeutralizerDecorator(ArrayType, Starters.ArrayType, Followers.ArrayType, 6, followers);
-            else if (CurrentSymbol == SymbolEnum.RecordSy)
-                RecordType();
-            else if (CurrentSymbol == SymbolEnum.SetSy)
-                SetType();
-            else if (CurrentSymbol == SymbolEnum.FileSy)
-                FileType();
+            //else if (CurrentSymbol == SymbolEnum.RecordSy)
+            //    RecordType();
+            //else if (CurrentSymbol == SymbolEnum.SetSy)
+            //    SetType();
+            //else if (CurrentSymbol == SymbolEnum.FileSy)
+            //    FileType();
         }
 
-        private void ArrayType(HashSet<SymbolEnum> followers = null)
+        private void ArrayType(HashSet<SymbolEnum> followers)
         {
             Accept(SymbolEnum.ArraySy);
             Accept(SymbolEnum.LeftSquareBracket);
-            SimpleType();
+            SimpleType(followers);
             while (CurrentSymbol == SymbolEnum.Comma)
             {
                 Accept(SymbolEnum.Comma);
-                SimpleType();
+                SimpleType(followers);
             }
             Accept(SymbolEnum.RightSquareBracket);
             Accept(SymbolEnum.OfSy);
-            Type();
+            NeutralizerDecorator(Type, Starters.Type, Followers.Type, 10, followers);
         }
 
-        private void RecordType()
-        {
-            // TODO
-        }
+        //private void RecordType()
+        //{
+        //    // TODO
+        //}
 
-        private void SetType()
-        {
-            // TODO
-        }
+        //private void SetType()
+        //{
+        //    // TODO
+        //}
 
-        private void FileType()
-        {
-            // TODO
-        }
+        //private void FileType()
+        //{
+        //    // TODO
+        //}
 
-        private bool IsStartPointerType(SymbolEnum symbol)
-        {
-            SymbolEnum[] allowedSymbols = { SymbolEnum.Arrow };
-            return allowedSymbols.Contains(symbol);
-        }
+        //private bool IsStartPointerType(SymbolEnum symbol)
+        //{
+        //    SymbolEnum[] allowedSymbols = { SymbolEnum.Arrow };
+        //    return allowedSymbols.Contains(symbol);
+        //}
 
-        private void PointerType()
-        {
-            // TODO
-        }
+        //private void PointerType()
+        //{
+        //    // TODO
+        //}
 
         private void VarDeclarationPart(HashSet<SymbolEnum> followers)
         {
@@ -267,7 +298,6 @@ namespace PascalCompiler
                 do
                 {
                     NeutralizerDecorator(VarDeclaration, Starters.VarDeclaration, Followers.VarDeclaration, 2, followers);
-                    Accept(SymbolEnum.Semicolon);
                 }
                 while (CurrentSymbol == SymbolEnum.Identifier);
             }
@@ -283,19 +313,20 @@ namespace PascalCompiler
             }
             Accept(SymbolEnum.Colon);
             NeutralizerDecorator(Type, Starters.Type, Followers.Type, 10, followers);
+            Accept(SymbolEnum.Semicolon);
         }
 
-        private void ProcAndFuncDeclarationPart()
-        {
-            // TODO
-        }
+        //private void ProcAndFuncDeclarationPart()
+        //{
+        //    // TODO
+        //}
 
         private void StatementPart(HashSet<SymbolEnum> followers)
         {
             NeutralizerDecorator(CompoundStatement, Starters.CompoundStatement, Followers.CompoundStatement, 6, followers);
         }
 
-        private void CompoundStatement(HashSet<SymbolEnum> followers = null)
+        private void CompoundStatement(HashSet<SymbolEnum> followers)
         {
             Accept(SymbolEnum.BeginSy);
             NeutralizerDecorator(Statement, Starters.Statement, Followers.Statement, 6, followers);
@@ -307,11 +338,11 @@ namespace PascalCompiler
             Accept(SymbolEnum.EndSy);
         }
 
-        private void Statement(HashSet<SymbolEnum> followers = null)
+        private void Statement(HashSet<SymbolEnum> followers)
         {
             if (IsStartStructuredStatement(CurrentSymbol))
             {
-                StructuredStatement();
+                NeutralizerDecorator(StructuredStatement, Starters.StructuredStatement, Followers.StructuredStatement, 6, followers);
             }
             else if (IsStartSimpleStatement(CurrentSymbol))
             {
@@ -324,12 +355,12 @@ namespace PascalCompiler
             return CurrentSymbol == SymbolEnum.Identifier;
         }
 
-        private void SimpleStatement(HashSet<SymbolEnum> followers = null)
+        private void SimpleStatement(HashSet<SymbolEnum> followers)
         {
             NeutralizerDecorator(AssignmentStatement, Starters.AssignmentStatement, Followers.AssignmentStatement, 6, followers);
         }
 
-        private void AssignmentStatement(HashSet<SymbolEnum> followers = null)
+        private void AssignmentStatement(HashSet<SymbolEnum> followers)
         {
             Accept(SymbolEnum.Identifier);
             Accept(SymbolEnum.Assign);
@@ -338,125 +369,125 @@ namespace PascalCompiler
 
         private bool IsStartStructuredStatement(SymbolEnum symbol)
         {
-            return CurrentSymbol == SymbolEnum.BeginSy || CurrentSymbol == SymbolEnum.IfSy || IsStartRepetitiveStatement(symbol) || CurrentSymbol == SymbolEnum.WithSy;
+            return CurrentSymbol == SymbolEnum.BeginSy || CurrentSymbol == SymbolEnum.IfSy || IsStartRepetitiveStatement(symbol);
         }
 
-        private void StructuredStatement()
+        private void StructuredStatement(HashSet<SymbolEnum> followers)
         {
             if (CurrentSymbol == SymbolEnum.BeginSy)
-                CompoundStatement();
-            else if (CurrentSymbol == SymbolEnum.IfSy || CurrentSymbol == SymbolEnum.CaseSy)
-                ConditionalStatement();
+                NeutralizerDecorator(CompoundStatement, Starters.CompoundStatement, Followers.CompoundStatement, 6, followers);
+            else if (CurrentSymbol == SymbolEnum.IfSy)
+                NeutralizerDecorator(ConditionalStatement, Starters.ConditionalStatement, Followers.ConditionalStatement, 6, followers);
             else if (IsStartRepetitiveStatement(CurrentSymbol))
-                RepetitiveStatement();
-            else if (CurrentSymbol == SymbolEnum.WithSy)
-                WithStatement();
+                NeutralizerDecorator(RepetitiveStatement, Starters.RepetitiveStatement, Followers.RepetitiveStatement, 6, followers);
+            //else if (CurrentSymbol == SymbolEnum.WithSy)
+            //    WithStatement();
         }
 
-        private void ConditionalStatement()
+        private void ConditionalStatement(HashSet<SymbolEnum> followers)
         {
             if (CurrentSymbol == SymbolEnum.IfSy)
             {
-                IfStatement();
+                IfStatement(followers);
             }
-            else if (CurrentSymbol == SymbolEnum.CaseSy)
-            {
-                CaseStatement();
-            }
+            //else if (CurrentSymbol == SymbolEnum.CaseSy)
+            //{
+            //    CaseStatement();
+            //}
         }
 
-        private void IfStatement()
+        private void IfStatement(HashSet<SymbolEnum> followers)
         {
             Accept(SymbolEnum.IfSy);
-            Expression();
+            NeutralizerDecorator(Expression, Starters.Expression, Followers.Expression, 6, followers);
             Accept(SymbolEnum.ThenSy);
-            Statement();
+            NeutralizerDecorator(Statement, Starters.Statement, Followers.Statement, 6, followers);
             if (CurrentSymbol == SymbolEnum.ElseSy)
             {
                 Accept(SymbolEnum.ElseSy);
-                Statement();
+                NeutralizerDecorator(Statement, Starters.Statement, Followers.Statement, 6, followers);
             }
         }
 
-        private void CaseStatement()
-        {
-            // TODO
-        }
+        //private void CaseStatement()
+        //{
+        //    // TODO
+        //}
 
         private bool IsStartRepetitiveStatement(SymbolEnum symbol)
         {
-            SymbolEnum[] allowedSymbols = { SymbolEnum.WhileSy, SymbolEnum.RepeatSy, SymbolEnum.ForSy };
+            SymbolEnum[] allowedSymbols = { SymbolEnum.WhileSy };
             return allowedSymbols.Contains(symbol);
         }
 
-        private void RepetitiveStatement()
+        private void RepetitiveStatement(HashSet<SymbolEnum> followers)
         {
             switch (CurrentSymbol)
             {
                 case SymbolEnum.WhileSy:
-                    WhileStatement();
+                    WhileStatement(followers);
                     break;
-                case SymbolEnum.RepeatSy:
-                    RepeatStatement();
-                    break;
-                case SymbolEnum.ForSy:
-                    ForStatement();
-                    break;
+                //case SymbolEnum.RepeatSy:
+                //    RepeatStatement();
+                //    break;
+                //case SymbolEnum.ForSy:
+                //    ForStatement();
+                //    break;
             }
         }
 
-        private void WhileStatement()
+        private void WhileStatement(HashSet<SymbolEnum> followers)
         {
             Accept(SymbolEnum.WhileSy);
-            Expression();
+            NeutralizerDecorator(Expression, Starters.Expression, Followers.Expression, 6, followers);
             Accept(SymbolEnum.DoSy);
-            Statement();
+            NeutralizerDecorator(Statement, Starters.Statement, Followers.Statement, 6, followers);
         }
 
-        private void RepeatStatement()
-        {
-            Accept(SymbolEnum.RepeatSy);
-            Statement();
-            while (CurrentSymbol == SymbolEnum.Semicolon)
-            {
-                NextSymbol();
-                Statement();
-            }
-            Accept(SymbolEnum.UntilSy);
-            Expression();
-        }
+        //private void RepeatStatement()
+        //{
+        //    Accept(SymbolEnum.RepeatSy);
+        //    Statement();
+        //    while (CurrentSymbol == SymbolEnum.Semicolon)
+        //    {
+        //        NextSymbol();
+        //        Statement();
+        //    }
+        //    Accept(SymbolEnum.UntilSy);
+        //    Expression();
+        //}
 
-        private void ForStatement()
-        {
-            Accept(SymbolEnum.ForSy);
-            ForStatementParameter();
-            Accept(SymbolEnum.Assign);
-            ForList();
-            Accept(SymbolEnum.DoSy);
-            Statement();
-        }
+        //private void ForStatement()
+        //{
+        //    Accept(SymbolEnum.ForSy);
+        //    ForStatementParameter();
+        //    Accept(SymbolEnum.Assign);
+        //    ForList();
+        //    Accept(SymbolEnum.DoSy);
+        //    Statement();
+        //}
 
-        private void ForStatementParameter()
-        {
-            Accept(SymbolEnum.Identifier);
-        }
+        //private void ForStatementParameter()
+        //{
+        //    Accept(SymbolEnum.Identifier);
+        //}
 
-        private void ForList()
-        {
-            Expression();
-            if (CurrentSymbol == SymbolEnum.ToSy || CurrentSymbol == SymbolEnum.DowntoSy)
-            {
-                NextSymbol();
-            }
-            Expression();
-        }
+        //private void ForList()
+        //{
+        //    Expression();
+        //    if (CurrentSymbol == SymbolEnum.ToSy || CurrentSymbol == SymbolEnum.DowntoSy)
+        //    {
+        //        NextSymbol();
+        //    }
+        //    Expression();
+        //}
 
-        private void WithStatement()
-        {
-            // TODO
-        }
+        //private void WithStatement()
+        //{
+        //    // TODO
+        //}
 
-        private void Expression(HashSet<SymbolEnum> followers = null)
+        private void Expression(HashSet<SymbolEnum> followers)
         {
             NeutralizerDecorator(SimpleExpression, Starters.SimpleExpression, Followers.SimpleExpression, 6, followers);
 
@@ -473,7 +504,7 @@ namespace PascalCompiler
             }
         }
 
-        private void SimpleExpression(HashSet<SymbolEnum> followers = null)
+        private void SimpleExpression(HashSet<SymbolEnum> followers)
         {
             if (CurrentSymbol == SymbolEnum.Minus || CurrentSymbol == SymbolEnum.Plus)
             {
@@ -491,7 +522,7 @@ namespace PascalCompiler
         }
 
         // Слагаемое
-        private void Term(HashSet<SymbolEnum> followers = null)
+        private void Term(HashSet<SymbolEnum> followers)
         {
             NeutralizerDecorator(Factor, Starters.Factor, Followers.Factor, 6, followers);
 
@@ -507,12 +538,12 @@ namespace PascalCompiler
         }
 
         // Множитель
-        private void Factor(HashSet<SymbolEnum> followers = null)
+        private void Factor(HashSet<SymbolEnum> followers)
         {
             if (CurrentSymbol == SymbolEnum.NotSy)
             {
                 NextSymbol();
-                Factor();
+                NeutralizerDecorator(Factor, Starters.Factor, Followers.Factor, 6, followers);
             }
             else
             {
@@ -556,7 +587,7 @@ namespace PascalCompiler
 
         private bool IsStartUnsignedConstant(SymbolEnum symbol)
         {
-            SymbolEnum[] allowedSymbols = { SymbolEnum.IntConstant, SymbolEnum.RealConstant, SymbolEnum.CharConstant, SymbolEnum.Identifier, SymbolEnum.NilSy };
+            SymbolEnum[] allowedSymbols = { SymbolEnum.IntConstant, SymbolEnum.RealConstant, SymbolEnum.CharConstant, SymbolEnum.Identifier };
             return allowedSymbols.Contains(symbol);
         }
     }

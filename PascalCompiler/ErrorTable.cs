@@ -8,8 +8,8 @@ namespace PascalCompiler
 {
     public class ErrorTable
     {
-        const int MAX_ERROR_IN_ROW_COUNT = 5;
-        const int MAX_ERROR_TOTAL_COUNT = 20;
+        const int MAX_ERROR_IN_ROW_COUNT = 10;
+        const int MAX_ERROR_TOTAL_COUNT = 200;
 
         public Dictionary<int, string> ErrorDigest { get; set; }
         public List<List<Error>> Errors { get; set; }

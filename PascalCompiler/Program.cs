@@ -72,7 +72,7 @@ namespace PascalCompiler
             var errorDigest = ReadErrorDigest();
             var errorTable = new ErrorTable(errorDigest);
 
-            var ioModule = new IOModule(errorTable, @"..\..\data\test_synt_3.pas", @"..\..\data\listing.txt");
+            var ioModule = new IOModule(errorTable, @"..\..\data\prog_Нейтрал.pas", @"..\..\data\listing.txt");
             var lexicalAnalyzer = new LexicalAnalyzer(ioModule);
             var syntacticAnalyzer = new SyntacticAnalyzer(ioModule, lexicalAnalyzer);
             syntacticAnalyzer.Run();

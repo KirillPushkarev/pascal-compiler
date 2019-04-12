@@ -174,8 +174,16 @@ namespace PascalCompiler
                         currentCharacter = ioModule.NextCh();
                         break;
                     case '.':
-                        CurrentSymbol = SymbolEnum.Dot;
                         currentCharacter = ioModule.NextCh();
+                        if (currentCharacter.Value == '.')
+                        {
+                            CurrentSymbol = SymbolEnum.TwoDots;
+                            currentCharacter = ioModule.NextCh();
+                        }
+                        else
+                        {
+                            CurrentSymbol = SymbolEnum.Dot;
+                        }
                         break;
                     case ',':
                         CurrentSymbol = SymbolEnum.Comma;
