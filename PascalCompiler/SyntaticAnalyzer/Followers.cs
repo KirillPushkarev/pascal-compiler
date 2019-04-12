@@ -24,6 +24,8 @@ namespace PascalCompiler.SyntaticAnalyzer
 
         public static HashSet<SymbolEnum> Type => new HashSet<SymbolEnum> { SymbolEnum.Semicolon };
 
+        public static HashSet<SymbolEnum> ArrayType => new HashSet<SymbolEnum> { SymbolEnum.Semicolon };
+
         public static HashSet<SymbolEnum> Statement => new HashSet<SymbolEnum> { SymbolEnum.Dot, SymbolEnum.Semicolon, SymbolEnum.EndSy };
 
         public static HashSet<SymbolEnum> CompoundStatement => new HashSet<SymbolEnum> { SymbolEnum.Dot, SymbolEnum.Semicolon };

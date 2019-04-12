@@ -13,10 +13,7 @@ namespace PascalCompiler
 
         private const int FORBIDDEN_SYMBOL_ERROR_CODE = 6;
 
-        private SymbolEnum CurrentSymbol
-        {
-            get { return lexicalAnalyzer.CurrentSymbol; }
-        }
+        private SymbolEnum CurrentSymbol => lexicalAnalyzer.CurrentSymbol;
 
         public SyntacticAnalyzer(IOModule ioModule, LexicalAnalyzer lexicalAnalyzer)
         {
@@ -58,7 +55,7 @@ namespace PascalCompiler
             Action<HashSet<SymbolEnum>> method, 
             HashSet<SymbolEnum> starters,
             HashSet<SymbolEnum> followers,
-            int errorCode,
+            int errorCode = FORBIDDEN_SYMBOL_ERROR_CODE,
             HashSet<SymbolEnum> parentFollowers = null
             )
         {
@@ -83,12 +80,6 @@ namespace PascalCompiler
             }
         }
 
-        public void Run()
-        {
-            NextSymbol();
-            Program();
-        }
-
         private void SkipToBefore(HashSet<SymbolEnum> starters, HashSet<SymbolEnum> followers)
         {
             while (!starters.Contains(CurrentSymbol) && !followers.Contains(CurrentSymbol) && !lexicalAnalyzer.IsFinished)
@@ -103,6 +94,12 @@ namespace PascalCompiler
             {
                 NextSymbol();
             }
+        }
+
+        public void Run()
+        {
+            NextSymbol();
+            Program();
         }
 
         private void Program()
@@ -159,7 +156,7 @@ namespace PascalCompiler
             if (IsStartSimpleType(CurrentSymbol))
                 SimpleType();
             else if (IsStartStructuredType(CurrentSymbol))
-                StructuredType();
+                StructuredType(followers);
             else if (IsStartPointerType(CurrentSymbol))
                 PointerType();
         }
@@ -209,10 +206,10 @@ namespace PascalCompiler
             return allowedSymbols.Contains(symbol);
         }
 
-        private void StructuredType()
+        private void StructuredType(HashSet<SymbolEnum> followers = null)
         {
             if (CurrentSymbol == SymbolEnum.ArraySy)
-                ArrayType();
+                NeutralizerDecorator(ArrayType, Starters.ArrayType, Followers.ArrayType, 6, followers);
             else if (CurrentSymbol == SymbolEnum.RecordSy)
                 RecordType();
             else if (CurrentSymbol == SymbolEnum.SetSy)
@@ -221,7 +218,7 @@ namespace PascalCompiler
                 FileType();
         }
 
-        private void ArrayType()
+        private void ArrayType(HashSet<SymbolEnum> followers = null)
         {
             Accept(SymbolEnum.ArraySy);
             Accept(SymbolEnum.LeftSquareBracket);

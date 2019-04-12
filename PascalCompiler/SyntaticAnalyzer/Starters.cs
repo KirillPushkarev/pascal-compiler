@@ -24,6 +24,8 @@ namespace PascalCompiler.SyntaticAnalyzer
 
         public static HashSet<SymbolEnum> Type => new HashSet<SymbolEnum> { SymbolEnum.IntConstant, SymbolEnum.CharConstant, SymbolEnum.Identifier, SymbolEnum.ArraySy, SymbolEnum.RecordSy, SymbolEnum.SetSy, SymbolEnum.FileSy, SymbolEnum.Arrow };
 
+        public static HashSet<SymbolEnum> ArrayType => new HashSet<SymbolEnum> { SymbolEnum.ArraySy };
+
         public static HashSet<SymbolEnum> Statement => new HashSet<SymbolEnum>(CompoundStatement.Concat(SimpleStatement));
 
         public static HashSet<SymbolEnum> CompoundStatement => new HashSet<SymbolEnum> { SymbolEnum.BeginSy };
