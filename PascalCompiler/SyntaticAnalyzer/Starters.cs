@@ -16,7 +16,7 @@ namespace PascalCompiler.SyntaticAnalyzer
 
         public static HashSet<SymbolEnum> VarDeclarationPart => new HashSet<SymbolEnum> { SymbolEnum.VarSy, SymbolEnum.BeginSy };
 
-        public static HashSet<SymbolEnum> StatementPart => CompoundStatement;
+        public static HashSet<SymbolEnum> StatementPart => new HashSet<SymbolEnum> { SymbolEnum.BeginSy };
 
         public static HashSet<SymbolEnum> VarDeclaration => new HashSet<SymbolEnum> { SymbolEnum.Identifier };
 

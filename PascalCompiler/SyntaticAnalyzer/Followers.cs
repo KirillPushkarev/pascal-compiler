@@ -6,7 +6,7 @@ namespace PascalCompiler.SyntaticAnalyzer
 {
     public static class Followers
     {
-        public static HashSet<SymbolEnum> Program => new HashSet<SymbolEnum> { SymbolEnum.Dot };
+        public static HashSet<SymbolEnum> Program => new HashSet<SymbolEnum> {};
 
         public static HashSet<SymbolEnum> ProgramHeading => new HashSet<SymbolEnum> { SymbolEnum.Semicolon };
 
