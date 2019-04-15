@@ -30,7 +30,7 @@ namespace PascalCompiler.SyntaticAnalyzer
 
         public static HashSet<SymbolEnum> StructuredStatement => new HashSet<SymbolEnum>(CompoundStatement.Concat(ConditionalStatement).Concat(RepetitiveStatement));
 
-        public static HashSet<SymbolEnum> CompoundStatement => new HashSet<SymbolEnum> { SymbolEnum.Dot, SymbolEnum.Semicolon };
+        public static HashSet<SymbolEnum> CompoundStatement => new HashSet<SymbolEnum> { SymbolEnum.Dot, SymbolEnum.Semicolon, SymbolEnum.EndSy };
 
         public static HashSet<SymbolEnum> ConditionalStatement => new HashSet<SymbolEnum> { SymbolEnum.Semicolon };
 

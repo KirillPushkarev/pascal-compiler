@@ -35,7 +35,7 @@ namespace PascalCompiler.SyntaticAnalyzer
 
         public static void CreateInitialScope()
         {
-            Scope.Open();
+            Open();
 
             var boolValues = new List<string> { "true", "false" };
             var boolType = new TypeDescEnum(TypeClass.Enums, boolValues);
@@ -52,21 +52,21 @@ namespace PascalCompiler.SyntaticAnalyzer
             var charType = new TypeDescScalar(ScalarType.Char);
             var charIdent = new IdentifierDesc("char", IdentifierClass.Types, charType);
 
-            Scope.CurrentScope.TypeTable.Add(boolType);
-            Scope.CurrentScope.TypeTable.Add(integerType);
-            Scope.CurrentScope.TypeTable.Add(realType);
-            Scope.CurrentScope.TypeTable.Add(charType);
+            CurrentScope.TypeTable.Add(boolType);
+            CurrentScope.TypeTable.Add(integerType);
+            CurrentScope.TypeTable.Add(realType);
+            CurrentScope.TypeTable.Add(charType);
             TypeDesc.booleanType = boolType;
             TypeDesc.integerType = integerType;
             TypeDesc.realType = realType;
             TypeDesc.charType = charType;
 
-            Scope.CurrentScope.IdentifierTable.Add(boolIdent);
-            Scope.CurrentScope.IdentifierTable.Add(trueIdent);
-            Scope.CurrentScope.IdentifierTable.Add(falseIdent);
-            Scope.CurrentScope.IdentifierTable.Add(integerIdent);
-            Scope.CurrentScope.IdentifierTable.Add(realIdent);
-            Scope.CurrentScope.IdentifierTable.Add(charIdent);
+            CurrentScope.IdentifierTable.Add(boolIdent);
+            CurrentScope.IdentifierTable.Add(trueIdent);
+            CurrentScope.IdentifierTable.Add(falseIdent);
+            CurrentScope.IdentifierTable.Add(integerIdent);
+            CurrentScope.IdentifierTable.Add(realIdent);
+            CurrentScope.IdentifierTable.Add(charIdent);
         }
 
         public IdentifierDesc FindIdentifier(string name)

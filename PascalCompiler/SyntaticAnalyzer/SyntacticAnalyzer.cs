@@ -354,11 +354,13 @@ namespace PascalCompiler
         private void CompoundStatement(HashSet<SymbolEnum> followers)
         {
             Accept(SymbolEnum.BeginSy);
-            NeutralizerDecorator(Statement, Starters.Statement, Followers.Statement, 6, followers);
-            while (CurrentSymbol == SymbolEnum.Semicolon)
+            while (IsStartSimpleStatement(CurrentSymbol) || IsStartStructuredStatement(CurrentSymbol))
             {
-                NextSymbol();
                 NeutralizerDecorator(Statement, Starters.Statement, Followers.Statement, 6, followers);
+                if (CurrentSymbol == SymbolEnum.Semicolon)
+                    NextSymbol();
+                else
+                    break;
             }
             Accept(SymbolEnum.EndSy);
         }
@@ -544,10 +546,11 @@ namespace PascalCompiler
                 var operation = CurrentSymbol;
                 NextSymbol();
                 var secondOperandType = NeutralizerDecoratorWithReturn(Term, Starters.Term, Followers.Term, 6, followers);
-                if (!TypeValidator.AreTypesCompatibleForAddition(firstOperandType, secondOperandType, operation))
+                var expressionType = TypeValidator.GetTypeAfterAddition(firstOperandType, secondOperandType, operation);
+                if (expressionType == null)
                     Error(328);
 
-                return firstOperandType ?? secondOperandType;
+                return expressionType;
             }
 
             return firstOperandType;
@@ -567,10 +570,11 @@ namespace PascalCompiler
                 var operation = CurrentSymbol;
                 NextSymbol();
                 var secondOperandType = NeutralizerDecoratorWithReturn(Factor, Starters.Factor, Followers.Factor, 6, followers);
-                if (!TypeValidator.AreTypesCompatibleForMultiplication(firstOperandType, secondOperandType, operation))
+                var expressionType = TypeValidator.GetTypeAfterMultiplication(firstOperandType, secondOperandType, operation);
+                if (expressionType == null)
                     Error(328);
 
-                return firstOperandType ?? secondOperandType;
+                return expressionType;
             }
 
             return firstOperandType;

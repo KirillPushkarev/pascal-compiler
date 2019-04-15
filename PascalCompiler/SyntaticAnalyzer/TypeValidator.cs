@@ -32,56 +32,71 @@ namespace PascalCompiler.SyntaticAnalyzer
                 type == TypeDesc.realType;
         }
 
-        public static bool AreTypesCompatibleForAddition(TypeDesc type1, TypeDesc type2, SymbolEnum operation)
+        public static TypeDesc GetTypeAfterAddition(TypeDesc type1, TypeDesc type2, SymbolEnum operation)
         {
             if (type1 == null || type2 == null)
-                return true;
+                return null;
 
             switch (operation)
             {
                 case SymbolEnum.Plus:
-                    return
-                        type1 == TypeDesc.integerType && type2 == TypeDesc.integerType ||
-                        type1 == TypeDesc.integerType && type2 == TypeDesc.realType ||
+                    if (type1 == TypeDesc.integerType && type2 == TypeDesc.integerType)
+                        return TypeDesc.integerType;
+                    if (type1 == TypeDesc.integerType && type2 == TypeDesc.realType ||
                         type1 == TypeDesc.realType && type2 == TypeDesc.integerType ||
-                        type1 == TypeDesc.realType && type2 == TypeDesc.realType;
+                        type1 == TypeDesc.realType && type2 == TypeDesc.realType)
+                        return TypeDesc.realType;
+                    return null;
                 case SymbolEnum.Minus:
-                    return
-                        type1 == TypeDesc.integerType && type2 == TypeDesc.integerType ||
-                        type1 == TypeDesc.integerType && type2 == TypeDesc.realType ||
+                    if (type1 == TypeDesc.integerType && type2 == TypeDesc.integerType)
+                        return TypeDesc.integerType;
+                    if (type1 == TypeDesc.integerType && type2 == TypeDesc.realType ||
                         type1 == TypeDesc.realType && type2 == TypeDesc.integerType ||
-                        type1 == TypeDesc.realType && type2 == TypeDesc.realType;
+                        type1 == TypeDesc.realType && type2 == TypeDesc.realType)
+                        return TypeDesc.realType;
+                    return null;
                 case SymbolEnum.OrSy:
-                    return
-                        type1 == TypeDesc.booleanType && type2 == TypeDesc.booleanType;
+                    if (type1 == TypeDesc.booleanType && type2 == TypeDesc.booleanType)
+                        return TypeDesc.booleanType;
+                    return null;
                 default:
-                    return false;
+                    return null;
             }
         }
 
-        public static bool AreTypesCompatibleForMultiplication(TypeDesc type1, TypeDesc type2, SymbolEnum operation)
+        public static TypeDesc GetTypeAfterMultiplication(TypeDesc type1, TypeDesc type2, SymbolEnum operation)
         {
             if (type1 == null || type2 == null)
-                return true;
+                return null;
 
             switch (operation)
             {
                 case SymbolEnum.Star:
+                    if (type1 == TypeDesc.integerType && type2 == TypeDesc.integerType)
+                        return TypeDesc.integerType;
+                    if (type1 == TypeDesc.integerType && type2 == TypeDesc.realType ||
+                        type1 == TypeDesc.realType && type2 == TypeDesc.integerType ||
+                        type1 == TypeDesc.realType && type2 == TypeDesc.realType)
+                        return TypeDesc.realType;
+                    return null;
                 case SymbolEnum.Slash:
-                    return
-                        type1 == TypeDesc.integerType && type2 == TypeDesc.integerType ||
+                    if (type1 == TypeDesc.integerType && type2 == TypeDesc.integerType ||
                         type1 == TypeDesc.integerType && type2 == TypeDesc.realType ||
                         type1 == TypeDesc.realType && type2 == TypeDesc.integerType ||
-                        type1 == TypeDesc.realType && type2 == TypeDesc.realType;
+                        type1 == TypeDesc.realType && type2 == TypeDesc.realType)
+                        return TypeDesc.realType;
+                    return null;
                 case SymbolEnum.ModSy:
                 case SymbolEnum.DivSy:
-                    return
-                        type1 == TypeDesc.integerType && type2 == TypeDesc.integerType;
+                    if (type1 == TypeDesc.integerType && type2 == TypeDesc.integerType)
+                        return TypeDesc.integerType;
+                    return null;
                 case SymbolEnum.AndSy:
-                    return
-                        type1 == TypeDesc.booleanType && type2 == TypeDesc.booleanType;
+                    if (type1 == TypeDesc.booleanType && type2 == TypeDesc.booleanType)
+                        return TypeDesc.booleanType;
+                    return null;
                 default:
-                    return false;
+                    return null;
             }
         }
 
